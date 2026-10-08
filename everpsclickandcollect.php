@@ -147,27 +147,25 @@ class Everpsclickandcollect extends CarrierModule
     }
 
     /**
-     * Default customer messages T1-T6.
-     * Variables: {latest} (latest pickup time of the week), {closing}, {now_limit}
+     * Default customer messages, in display order.
+     * NOTE, T2, T1: small notes below the pickup time (title, then notes, T1 last).
+     * T5, T6: "we may not prepare in advance" warnings.
+     * Variables: {latest} (latest pickup time of the week), {closing}, {now_limit}, {whatsapp} (WhatsApp link)
      */
     public function getDefaultTexts()
     {
         return array(
-            'T1' => array(
-                'fr' => 'Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l\'avance par WhatsApp : un collègue restera au magasin pour vous attendre.',
-                'en' => 'To pick up between {latest} and {closing}, choose {latest} and let us know in advance on WhatsApp: a colleague will stay in the shop for you.',
+            'NOTE' => array(
+                'fr' => 'Merci de respecter l\'horaire choisi.',
+                'en' => 'Please keep to the time you chose.',
             ),
             'T2' => array(
-                'fr' => 'Pour modifier l\'heure de retrait, contactez-nous par WhatsApp. Nous ne pouvons souvent pas répondre au téléphone, merci de ne pas appeler.',
-                'en' => 'To change your pickup time, please contact us on WhatsApp. We often cannot answer the phone, please do not call.',
+                'fr' => 'L\'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée. Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d\'horaire, laissez-nous un message sur {whatsapp}.',
+                'en' => 'The number of customers in the shop varies, so we cannot guarantee your order will be ready as soon as you arrive. As we are often busy with customers and cannot always answer the phone, please leave us a message on {whatsapp} to change your pickup time.',
             ),
-            'T3' => array(
-                'fr' => 'Quand le magasin est très fréquenté, votre commande pourra être préparée à votre arrivée. Merci de votre patience.',
-                'en' => 'When the shop is busy, your order may be prepared when you arrive. Thank you for your patience.',
-            ),
-            'T4' => array(
-                'fr' => 'Merci de venir dans les {now_limit} minutes. Si vous ne venez pas tout de suite, nous ne préparerons plus votre commande à l\'avance.',
-                'en' => 'Please come within {now_limit} minutes. If you do not come right away, we will no longer prepare your order in advance.',
+            'T1' => array(
+                'fr' => 'Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l\'avance sur {whatsapp} : un collègue restera au magasin pour vous attendre.',
+                'en' => 'To pick up between {latest} and {closing}, choose {latest} and let us know in advance on {whatsapp}: a colleague will stay in the shop for you.',
             ),
             'T5' => array(
                 'fr' => 'Vous n\'avez pas indiqué d\'heure d\'arrivée : nous ne préparerons peut-être pas votre commande à l\'avance. Merci de votre compréhension.',
@@ -206,6 +204,14 @@ class Everpsclickandcollect extends CarrierModule
                 'EVERPSCLICKANDCOLLECT_OPEN_DAYS',
                 'EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST',
                 'EVERPSCLICKANDCOLLECT_PICKUP_LATEST',
+                'EVERPSCLICKANDCOLLECT_WHATSAPP',
+                'EVERPSCLICKANDCOLLECT_COLOR_MAIN',
+                'EVERPSCLICKANDCOLLECT_COLOR_WARNING',
+                'EVERPSCLICKANDCOLLECT_COLOR_NOTES',
+                'EVERPSCLICKANDCOLLECT_TEXT_T3',
+                'EVERPSCLICKANDCOLLECT_TEXT_T3_ON',
+                'EVERPSCLICKANDCOLLECT_TEXT_T4',
+                'EVERPSCLICKANDCOLLECT_TEXT_T4_ON',
             )
         );
         foreach (array_keys($this->getDefaultTexts()) as $code) {
@@ -516,7 +522,7 @@ class Everpsclickandcollect extends CarrierModule
                         'lang' => true,
                         'label' => $this->l('Custom message on order tunnel'),
                         'desc' => $this->l('Please add custom order tunnel message'),
-                        'hint' => $this->l('Shown below the pickup time messages T1-T3 (or above the stores when the pickup time is not asked)'),
+                        'hint' => $this->l('Only shown when the pickup time is not asked (above the stores). With the pickup time, use the texts of the Pickup time settings'),
                         'name' => 'EVERPSCLICKANDCOLLECT_MSG',
                         'required' => false,
                         'autoload_rte' => true
@@ -737,7 +743,7 @@ class Everpsclickandcollect extends CarrierModule
         foreach (EverpsclickandcollectPickup::$steps as $step) {
             $steps[] = array('id' => $step, 'name' => $step . ' min');
         }
-        $variables = $this->l('Variables:') . ' {latest}, {closing}, {now_limit}';
+        $variables = $this->l('Variables:') . ' {latest}, {closing}, {now_limit}, {whatsapp}';
         $inputs = array();
         foreach ($this->getDayNames() as $i => $name) {
             $inputs[] = array(
@@ -816,11 +822,36 @@ class Everpsclickandcollect extends CarrierModule
                 'class' => 'fixed-width-sm',
                 'suffix' => 'h',
             ),
+            array(
+                'type' => 'text',
+                'label' => $this->l('WhatsApp link'),
+                'desc' => $this->l('e.g. https://wa.me/33612345678. Shown as a "WhatsApp" link where the texts contain {whatsapp}'),
+                'name' => 'EVERPSCLICKANDCOLLECT_WHATSAPP',
+                'class' => 'fixed-width-xxl',
+            ),
+            array(
+                'type' => 'color',
+                'label' => $this->l('Main color'),
+                'desc' => $this->l('Selected choices, buttons and links. Empty: color of your theme'),
+                'name' => 'EVERPSCLICKANDCOLLECT_COLOR_MAIN',
+            ),
+            array(
+                'type' => 'color',
+                'label' => $this->l('Warning box color'),
+                'desc' => $this->l('Border of the "we may not prepare in advance" box; its background is a light shade of this color'),
+                'name' => 'EVERPSCLICKANDCOLLECT_COLOR_WARNING',
+            ),
+            array(
+                'type' => 'color',
+                'label' => $this->l('Notes text color'),
+                'desc' => $this->l('Small notes below the pickup time'),
+                'name' => 'EVERPSCLICKANDCOLLECT_COLOR_NOTES',
+            ),
         ));
         foreach ($this->getTextDescriptions() as $code => $when) {
             $inputs[] = array(
                 'type' => 'switch',
-                'label' => sprintf($this->l('Show message %s'), $code),
+                'label' => sprintf($this->l('Show text %s'), $code),
                 'desc' => $when,
                 'name' => 'EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON',
                 'is_bool' => true,
@@ -829,7 +860,7 @@ class Everpsclickandcollect extends CarrierModule
             $inputs[] = array(
                 'type' => 'textarea',
                 'lang' => true,
-                'label' => sprintf($this->l('Message %s'), $code),
+                'label' => sprintf($this->l('Text %s'), $code),
                 'desc' => $variables,
                 'name' => 'EVERPSCLICKANDCOLLECT_TEXT_' . $code,
                 'autoload_rte' => false,
@@ -849,18 +880,20 @@ class Everpsclickandcollect extends CarrierModule
     public function getTextDescriptions()
     {
         return array(
-            'T1' => $this->l('Checkout, all customers'),
-            'T2' => $this->l('Checkout, all customers'),
-            'T3' => $this->l('Checkout, all customers'),
-            'T4' => $this->l('Customer chose "Pick up now"'),
-            'T5' => $this->l('Customer chose "Pick up later" without any time'),
-            'T6' => $this->l('Time range too wide (dates too far apart or total time too long)'),
+            'NOTE' => $this->l('Title of the small notes below the pickup time (all customers)'),
+            'T2' => $this->l('Note below the title (all customers)'),
+            'T1' => $this->l('Last note (all customers)'),
+            'T5' => $this->l('Warning box: customer chose "Pick up later" without any time'),
+            'T6' => $this->l('Warning box: time range too wide (dates too far apart or total time too long)'),
         );
     }
 
     protected function getPickupFormValues()
     {
         $values = array();
+        foreach (array('EVERPSCLICKANDCOLLECT_WHATSAPP', 'EVERPSCLICKANDCOLLECT_COLOR_MAIN', 'EVERPSCLICKANDCOLLECT_COLOR_WARNING', 'EVERPSCLICKANDCOLLECT_COLOR_NOTES') as $key) {
+            $values[$key] = Tools::getValue($key, (string) Configuration::get($key));
+        }
         foreach (array_keys(EverpsclickandcollectPickup::$defaults) as $key) {
             $stored = Configuration::get($key);
             $values[$key] = Tools::getValue($key, $stored === false ? EverpsclickandcollectPickup::$defaults[$key] : $stored);
@@ -954,6 +987,16 @@ class Everpsclickandcollect extends CarrierModule
         ) {
             $this->postWarnings[] = $this->l('The maximum total time is longer than one day of pickup times: this condition will not take effect unless several days are chosen.');
         }
+        $link = trim((string) Tools::getValue('EVERPSCLICKANDCOLLECT_WHATSAPP'));
+        if ($link !== '' && !Validate::isAbsoluteUrl($link)) {
+            $this->postErrors[] = $this->l('Error : the WhatsApp link must be a full address, e.g. https://wa.me/33612345678');
+        }
+        foreach (array('EVERPSCLICKANDCOLLECT_COLOR_MAIN', 'EVERPSCLICKANDCOLLECT_COLOR_WARNING', 'EVERPSCLICKANDCOLLECT_COLOR_NOTES') as $key) {
+            $color = trim((string) Tools::getValue($key));
+            if ($color !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+                $this->postErrors[] = sprintf($this->l('Error : "%s" is not a valid color, use e.g. #24b9d7'), $color);
+            }
+        }
         $badLine = null;
         if ($P::parseExceptions((string) Tools::getValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES'), $badLine) === null) {
             $this->postErrors[] = sprintf(
@@ -980,6 +1023,9 @@ class Everpsclickandcollect extends CarrierModule
             );
         }
         Configuration::updateValue('EVERPSCLICKANDCOLLECT_SCHEDULE', json_encode($schedule));
+        foreach (array('EVERPSCLICKANDCOLLECT_WHATSAPP', 'EVERPSCLICKANDCOLLECT_COLOR_MAIN', 'EVERPSCLICKANDCOLLECT_COLOR_WARNING', 'EVERPSCLICKANDCOLLECT_COLOR_NOTES') as $key) {
+            Configuration::updateValue($key, trim((string) Tools::getValue($key)));
+        }
         Configuration::updateValue('EVERPSCLICKANDCOLLECT_PICKUP_CLOSING', EverpsclickandcollectPickup::toTime(
             EverpsclickandcollectPickup::toMinutes((string) Tools::getValue('EVERPSCLICKANDCOLLECT_PICKUP_CLOSING'))
         ));
@@ -1228,7 +1274,8 @@ class Everpsclickandcollect extends CarrierModule
                 'ajax_url' => $this->context->link->getModuleLink($this->name, 'ajaxEverShippingStore'),
                 'stores' => $shipping_stores,
                 'selected_store_id' => $selectedStoreId,
-                'everclickncollect_id' => Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
+                'everclickncollect_id' => Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID'),
+                'evercnc_style' => $this->getColorStyle(),
             )
         );
         if ($askDate) {
@@ -1321,13 +1368,38 @@ class Everpsclickandcollect extends CarrierModule
     }
 
     /**
-     * Customer messages T1-T6 with variables replaced, '' when switched off
+     * CSS variables for the colors chosen in the settings
+     */
+    public function getColorStyle()
+    {
+        $vars = array(
+            'EVERPSCLICKANDCOLLECT_COLOR_MAIN' => '--evercnc-primary',
+            'EVERPSCLICKANDCOLLECT_COLOR_WARNING' => '--evercnc-warn',
+            'EVERPSCLICKANDCOLLECT_COLOR_NOTES' => '--evercnc-notes',
+        );
+        $style = '';
+        foreach ($vars as $key => $var) {
+            $color = (string) Configuration::get($key);
+            if (preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+                $style .= $var . ':' . $color . ';';
+            }
+        }
+        return $style;
+    }
+
+    /**
+     * Customer texts as safe HTML, variables replaced, '' when switched off
      */
     public function getPickupTexts($idLang)
     {
         $settings = EverpsclickandcollectPickup::getSettings();
         $latest = EverpsclickandcollectPickup::toTime($settings['latest']);
         $closing = EverpsclickandcollectPickup::toTime($settings['closing']);
+        $link = trim((string) Configuration::get('EVERPSCLICKANDCOLLECT_WHATSAPP'));
+        $whatsapp = 'WhatsApp';
+        if ($link !== '' && Validate::isAbsoluteUrl($link)) {
+            $whatsapp = '<a href="' . Tools::safeOutput($link) . '" target="_blank" rel="noopener">WhatsApp</a>';
+        }
         $vars = array(
             '{latest}' => $latest,
             '{closing}' => $closing,
@@ -1337,7 +1409,8 @@ class Everpsclickandcollect extends CarrierModule
         foreach (array_keys($this->getDefaultTexts()) as $code) {
             $key = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
             $text = Configuration::get($key . '_ON') === '0' ? '' : (string) Configuration::get($key, (int) $idLang);
-            $texts[$code] = strtr($text, $vars);
+            $html = nl2br(Tools::safeOutput(strtr($text, $vars)));
+            $texts[$code] = str_replace('{whatsapp}', $whatsapp, $html);
         }
         return $texts;
     }

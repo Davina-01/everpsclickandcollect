@@ -153,3 +153,14 @@
 	.evercnc .evercnc-period .evercnc-p-date { flex: 1 0 100%; }
 	.evercnc-period { padding-bottom: 0.5rem; border-bottom: 1px dashed var(--evercnc-border); }
 }
+
+/* Warning box and small notes (3.4.0) */
+.evercnc { --evercnc-warn: #e0a100; --evercnc-notes: #777; }
+.evercnc-alert { margin: 0.75rem 0 0; padding: 0.65rem 0.9rem; border: 1px solid var(--evercnc-warn); border-radius: 8px; background: #fff8e5; color: #4a4a4a; font-size: 0.85rem; line-height: 1.45; }
+@supports (background: color-mix(in srgb, red 10%, white)) {
+	.evercnc-alert { background: color-mix(in srgb, var(--evercnc-warn) 10%, #fff); }
+}
+.evercnc-notes { margin-top: 1rem; font-size: 0.72rem; line-height: 1.45; color: var(--evercnc-notes); }
+.evercnc-notes p { margin: 0 0 0.3rem; font-size: inherit; line-height: inherit; color: inherit; }
+.evercnc-notes .evercnc-notes__title { font-weight: 600; margin-bottom: 0.2rem; }
+.evercnc-notes a, .evercnc-alert a { color: var(--evercnc-primary); font-weight: 600; text-decoration: underline; }

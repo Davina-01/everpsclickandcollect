@@ -17,7 +17,7 @@
 *}
 <div class="evercnc col-12" id="everclickncollect_id"
      data-evercncurl="{$ajax_url|escape:'htmlall':'UTF-8'}"
-     data-evercnccarrier="{$everclickncollect_id|escape:'htmlall':'UTF-8'}">
+     data-evercnccarrier="{$everclickncollect_id|escape:'htmlall':'UTF-8'}"{if $evercnc_style} style="{$evercnc_style|escape:'htmlall':'UTF-8'}"{/if}>
 
 	{if !$ask_date && isset($custom_msg) && $custom_msg}
 	<div class="evercnc-msg">{$custom_msg nofilter}</div>
@@ -57,9 +57,6 @@
 					<small>{l s='I am on my way, or I can come as soon as the order is ready (within %d minutes)' sprintf=[$pickup_now_limit|intval] mod='everpsclickandcollect'}</small>
 				</span>
 			</label>
-			{if $pickup_texts.T4}
-			<p class="evercnc-tip evercnc-tip--warn" data-tip="T4"{if $pickup_mode != 'now'} hidden{/if}>{$pickup_texts.T4|escape:'htmlall':'UTF-8'|nl2br nofilter}</p>
-			{/if}
 			{/if}
 			<label class="evercnc-mode{if $pickup_mode == 'later'} evercnc-mode--active{/if}">
 				<input type="radio" name="evercnc_mode" value="later" {if $pickup_mode == 'later'}checked{/if}>
@@ -113,20 +110,19 @@
 			<button type="button" class="evercnc-add">+ {l s='Add another time you might come' mod='everpsclickandcollect'}</button>
 			<p class="evercnc-error alert alert-danger" hidden></p>
 			{if $pickup_texts.T5}
-			<p class="evercnc-tip evercnc-tip--warn" data-tip="T5" hidden>{$pickup_texts.T5|escape:'htmlall':'UTF-8'|nl2br nofilter}</p>
+			<div class="evercnc-alert" role="status" data-tip="T5" hidden>{$pickup_texts.T5 nofilter}</div>
 			{/if}
 			{if $pickup_texts.T6}
-			<p class="evercnc-tip evercnc-tip--warn" data-tip="T6" hidden>{$pickup_texts.T6|escape:'htmlall':'UTF-8'|nl2br nofilter}</p>
+			<div class="evercnc-alert" role="status" data-tip="T6" hidden>{$pickup_texts.T6 nofilter}</div>
 			{/if}
 			{/if}
 		</div>
 
-		{if $pickup_texts.T1 || $pickup_texts.T2 || $pickup_texts.T3 || (isset($custom_msg) && $custom_msg)}
-		<div class="evercnc-tips">
-			{foreach from=['T1', 'T2', 'T3'] item=code}
-			{if $pickup_texts[$code]}<p class="evercnc-tip" data-tip="{$code}">{$pickup_texts[$code]|escape:'htmlall':'UTF-8'|nl2br nofilter}</p>{/if}
-			{/foreach}
-			{if isset($custom_msg) && $custom_msg}<div class="evercnc-msg">{$custom_msg nofilter}</div>{/if}
+		{if $pickup_texts.NOTE || $pickup_texts.T2 || $pickup_texts.T1}
+		<div class="evercnc-notes">
+			{if $pickup_texts.NOTE}<p class="evercnc-notes__title">{$pickup_texts.NOTE nofilter}</p>{/if}
+			{if $pickup_texts.T2}<p>{$pickup_texts.T2 nofilter}</p>{/if}
+			{if $pickup_texts.T1}<p>{$pickup_texts.T1 nofilter}</p>{/if}
 		</div>
 		{/if}
 		<p class="evercnc-msg-end" hidden

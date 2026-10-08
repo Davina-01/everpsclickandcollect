@@ -3,7 +3,7 @@
  *
  * A. "Pick up now"
  * B. "Pick up later" with up to 3 optional periods "date HH:MM - HH:MM"
- * Messages T4 / T5 / T6 follow the customer's choice live; the same rules are checked
+ * Warnings T5 / T6 follow the customer's choice live; the same rules are checked
  * again on the server when the customer presses "Continue".
  *
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
@@ -210,7 +210,6 @@
 		$booking.find('.evercnc-mode').each(function () {
 			$(this).toggleClass('evercnc-mode--active', $(this).find('input').is(':checked'));
 		});
-		$booking.find('[data-tip="T4"]').prop('hidden', mode !== 'now');
 		$booking.find('.evercnc-later').prop('hidden', mode !== 'later');
 
 		var periods = [];

@@ -74,5 +74,20 @@ function upgrade_module_3_4_0($module)
         Configuration::deleteByName($key);
     }
 
+    // T3 and T4 do not exist anymore (T3 merged into T2, T4 removed)
+    foreach (array('T3', 'T4') as $code) {
+        Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code);
+        Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON');
+    }
+    // Reuse the WhatsApp link of the old custom checkout message, if any
+    if (!Configuration::get('EVERPSCLICKANDCOLLECT_WHATSAPP')) {
+        foreach (Language::getIDs(false) as $idLang) {
+            if (preg_match('#https?://(?:wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)/[^"\'\s<]+#i', (string) Configuration::get('EVERPSCLICKANDCOLLECT_MSG', $idLang), $m)) {
+                Configuration::updateValue('EVERPSCLICKANDCOLLECT_WHATSAPP', $m[0]);
+                break;
+            }
+        }
+    }
+
     return $module->installSlotDefaults() && $module->installPickupTab();
 }
