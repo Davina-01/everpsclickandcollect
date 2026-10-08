@@ -18,6 +18,8 @@ require_once _PS_MODULE_DIR_.'everpsclickandcollect/models/Everpsclickandcollect
  */
 class AdminEverPsClickAndCollectController extends ModuleAdminController
 {
+    public $isSeven;
+
     public $toolbar_title;
     private $html;
 

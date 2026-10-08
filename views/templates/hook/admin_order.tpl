@@ -57,13 +57,13 @@
                 <p class="text-muted small mb-2">{l s='For "Pick up later": 1 to 3 time periods, leave a line empty to remove it.' mod='everpsclickandcollect'}</p>
                 {foreach from=$pickup_edit_periods item=p key=i}
                 <div class="form-inline mb-2">
-                    <input type="date" class="form-control mr-2" name="evercnc_periods[{$i|intval}][date]" value="{$p.date|escape:'htmlall':'UTF-8'}">
-                    <select class="form-control mr-1" name="evercnc_periods[{$i|intval}][start]">
+                    <input type="date" class="form-control mr-2" name="evercnc_periods[{$i|string_format:'%d'}][date]" value="{$p.date|escape:'htmlall':'UTF-8'}">
+                    <select class="form-control mr-1" name="evercnc_periods[{$i|string_format:'%d'}][start]">
                         <option value="">--:--</option>
                         {foreach from=$pickup_times item=t}<option value="{$t|escape:'htmlall':'UTF-8'}"{if $t == $p.start} selected{/if}>{$t|escape:'htmlall':'UTF-8'}</option>{/foreach}
                     </select>
                     <span class="mx-1">–</span>
-                    <select class="form-control" name="evercnc_periods[{$i|intval}][end]">
+                    <select class="form-control" name="evercnc_periods[{$i|string_format:'%d'}][end]">
                         <option value="">--:--</option>
                         {foreach from=$pickup_times item=t}<option value="{$t|escape:'htmlall':'UTF-8'}"{if $t == $p.end} selected{/if}>{$t|escape:'htmlall':'UTF-8'}</option>{/foreach}
                     </select>

@@ -26,6 +26,8 @@ require_once _PS_MODULE_DIR_.'everpsclickandcollect/models/Everpsclickandcollect
 class EverpsclickandcollectcronModuleFrontController extends ModuleFrontController
 {
     public $controller_name = 'cron';
+    public $smileys = array();
+    public $randSmiley;
 
     public function init()
     {
@@ -59,8 +61,8 @@ class EverpsclickandcollectcronModuleFrontController extends ModuleFrontControll
         );
         $this->randSmiley = array_rand($this->smileys);
         if (!Tools::getValue('token')
-            || Tools::encrypt('everpsclickandcollect/cron') != Tools::getValue('token')
-            || !Module::isInstalled('everpsclickandcollect')
+            || Tools::hash('everpsclickandcollect/cron') != Tools::getValue('token')
+            || !Module::isEnabled('everpsclickandcollect')
         ) {
             Tools::redirect('index.php');
         }
@@ -72,8 +74,8 @@ class EverpsclickandcollectcronModuleFrontController extends ModuleFrontControll
     public function initContent()
     {
         if (!Tools::getValue('token')
-            || Tools::encrypt('everpsclickandcollect/cron') != Tools::getValue('token')
-            || !Module::isInstalled('everpsclickandcollect')
+            || Tools::hash('everpsclickandcollect/cron') != Tools::getValue('token')
+            || !Module::isEnabled('everpsclickandcollect')
         ) {
             Tools::redirect('index.php');
         }

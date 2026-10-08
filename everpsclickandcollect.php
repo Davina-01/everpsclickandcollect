@@ -277,7 +277,7 @@ class Everpsclickandcollect extends CarrierModule
             $this->name,
             'cron',
             array(
-                'token' => Tools::encrypt($this->name.'/cron')
+                'token' => Tools::hash($this->name.'/cron')
             ),
             true,
             (int) $this->context->language->id,
@@ -2554,6 +2554,19 @@ class Everpsclickandcollect extends CarrierModule
         return $order_states;
     }
 
+    /**
+     * Price in the order currency (Tools::displayPrice() is deprecated since 1.7.6)
+     */
+    protected function formatOrderPrice($order, $amount)
+    {
+        $currency = new Currency((int) $order->id_currency);
+        $locale = $this->context->getCurrentLocale();
+        if ($locale && Validate::isLoadedObject($currency)) {
+            return $locale->formatPrice((float) $amount, $currency->iso_code);
+        }
+        return number_format((float) $amount, 2, ',', ' ');
+    }
+
     protected function getOrderDatasForEmail($order)
     {
         $cart = new Cart(
@@ -2684,13 +2697,13 @@ class Everpsclickandcollect extends CarrierModule
         $table .= Tools::displayDate($order->date_add);
         $table .= '</td>';
         $table .=  '<td '.$tdStyle.'>';
-        $table .= Tools::displayPrice($order->total_paid);
+        $table .= $this->formatOrderPrice($order, $order->total_paid);
         $table .= '</td>';
         $table .=  '<td '.$tdStyle.'>';
         $table .= $carrier->name;
         $table .= '</td>';
         $table .=  '<td '.$tdStyle.'>';
-        $table .= Tools::displayPrice($order->total_shipping);
+        $table .= $this->formatOrderPrice($order, $order->total_shipping);
         $table .= '</td>';
         $table .= '</tr>';
         $table .= '</table>';

@@ -26,7 +26,7 @@
 	<p class="evercnc-title">{l s='Please choose a pickup location' mod='everpsclickandcollect'}</p>
 	<div class="evercnc-stores">
 		{foreach from=$stores item=store}
-		{assign var=sid value=$store.id_store|intval}
+		{assign var=sid value=$store.id_store|string_format:'%d'}
 		<label class="evercnc-store{if $store.selected} evercnc-store--active{/if}" data-idstore="{$sid}">
 			{if $only_one}
 				<input type="hidden" name="everpsclickandcollect" value="{$sid}">
@@ -54,7 +54,7 @@
 				<input type="radio" name="evercnc_mode" value="now" {if $pickup_mode == 'now'}checked{/if}>
 				<span class="evercnc-mode__body">
 					<strong>{l s='Pick up now' mod='everpsclickandcollect'}</strong>
-					<small>{l s='I am on my way, or I can come as soon as the order is ready (within %d minutes)' sprintf=[$pickup_now_limit|intval] mod='everpsclickandcollect'}</small>
+					<small>{l s='I am on my way, or I can come as soon as the order is ready (within %d minutes)' sprintf=[$pickup_now_limit|string_format:'%d'] mod='everpsclickandcollect'}</small>
 				</span>
 			</label>
 			{/if}
@@ -84,7 +84,7 @@
 					</select>
 					<span class="evercnc-time">
 						<select class="form-control evercnc-p-h" data-part="sh" name="evercnc_periods[{$idx}][sh]" aria-label="{l s='From (hour)' mod='everpsclickandcollect'}"{if !$shown} disabled{/if}>
-							{foreach from=$pickup_hours item=h}<option value="{$h|intval}"{if $p.sh !== '' && $p.sh == $h} selected{/if}>{$h|string_format:'%02d'}</option>{/foreach}
+							{foreach from=$pickup_hours item=h}<option value="{$h|string_format:'%d'}"{if $p.sh !== '' && $p.sh == $h} selected{/if}>{$h|string_format:'%02d'}</option>{/foreach}
 						</select><span class="evercnc-colon">:</span><select class="form-control evercnc-p-m" data-part="sm" name="evercnc_periods[{$idx}][sm]" aria-label="{l s='From (minutes)' mod='everpsclickandcollect'}"{if !$shown} disabled{/if}>
 							{foreach from=$pickup_minutes item=m}{assign var=mm value=$m|string_format:'%02d'}<option value="{$mm}"{if $p.sm === $mm} selected{/if}>{$mm}</option>{/foreach}
 						</select>
@@ -92,7 +92,7 @@
 					<span class="evercnc-sep">–</span>
 					<span class="evercnc-time">
 						<select class="form-control evercnc-p-h" data-part="eh" name="evercnc_periods[{$idx}][eh]" aria-label="{l s='To (hour)' mod='everpsclickandcollect'}"{if !$shown} disabled{/if}>
-							{foreach from=$pickup_hours item=h}<option value="{$h|intval}"{if $p.eh !== '' && $p.eh == $h} selected{/if}>{$h|string_format:'%02d'}</option>{/foreach}
+							{foreach from=$pickup_hours item=h}<option value="{$h|string_format:'%d'}"{if $p.eh !== '' && $p.eh == $h} selected{/if}>{$h|string_format:'%02d'}</option>{/foreach}
 						</select><span class="evercnc-colon">:</span><select class="form-control evercnc-p-m" data-part="em" name="evercnc_periods[{$idx}][em]" aria-label="{l s='To (minutes)' mod='everpsclickandcollect'}"{if !$shown} disabled{/if}>
 							{foreach from=$pickup_minutes item=m}{assign var=mm value=$m|string_format:'%02d'}<option value="{$mm}"{if $p.em === $mm} selected{/if}>{$mm}</option>{/foreach}
 						</select>
