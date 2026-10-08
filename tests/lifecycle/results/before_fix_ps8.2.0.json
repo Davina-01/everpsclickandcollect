@@ -1,0 +1,494 @@
+[
+ {
+  "scenario": "S01",
+  "check": "install succeeds",
+  "pass": true,
+  "detail": "Install action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S01",
+  "check": "module active",
+  "pass": true,
+  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '1'}"
+ },
+ {
+  "scenario": "S01",
+  "check": "3 tables exist",
+  "pass": true,
+  "detail": "{'everpsclickandcollect': 0, 'everpsclickandcollect_store_stock': 0, 'everpsclickandcollect_store': 5}"
+ },
+ {
+  "scenario": "S01",
+  "check": "exactly 1 active module carrier",
+  "pass": true,
+  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+ },
+ {
+  "scenario": "S01",
+  "check": "CARRIER_ID points to it",
+  "pass": true,
+  "detail": "7"
+ },
+ {
+  "scenario": "S01",
+  "check": "pickup edit tab installed",
+  "pass": true,
+  "detail": "['AdminEverPsClickAndCollect', 'AdminEverPsClickAndCollectPickup']"
+ },
+ {
+  "scenario": "S01",
+  "check": "carrier offered at checkout",
+  "pass": true,
+  "detail": "{'cart': 51, 'offered': [7, 1, 2]}"
+ },
+ {
+  "scenario": "S02",
+  "check": "second install() refused",
+  "pass": true,
+  "detail": "{'method': 'install', 'returned': False, 'errors': ['This module has already been installed.']}"
+ },
+ {
+  "scenario": "S02",
+  "check": "no extra carrier created",
+  "pass": false,
+  "detail": "1 -> 2"
+ },
+ {
+  "scenario": "S02",
+  "check": "CARRIER_ID unchanged",
+  "pass": false,
+  "detail": "7 -> 8"
+ },
+ {
+  "scenario": "S02",
+  "check": "store rows not duplicated",
+  "pass": false,
+  "detail": "5 -> 10"
+ },
+ {
+  "scenario": "S02",
+  "check": "console install on installed module = no-op",
+  "pass": true,
+  "detail": "Install action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S03",
+  "check": "disable succeeds",
+  "pass": true,
+  "detail": "Disable action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S03",
+  "check": "carrier NOT offered while module disabled",
+  "pass": false,
+  "detail": "{'cart': 51, 'offered': [7, 1, 2]}"
+ },
+ {
+  "scenario": "S03",
+  "check": "data kept while disabled",
+  "pass": true,
+  "detail": "{'everpsclickandcollect': 0, 'everpsclickandcollect_store_stock': 0, 'everpsclickandcollect_store': 5}"
+ },
+ {
+  "scenario": "S03",
+  "check": "enable succeeds",
+  "pass": true,
+  "detail": "Enable action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S03",
+  "check": "carrier offered again after enable",
+  "pass": true,
+  "detail": "{'cart': 51, 'offered': [7, 1, 2]}"
+ },
+ {
+  "scenario": "S04",
+  "check": "uninstall succeeds",
+  "pass": true,
+  "detail": "Uninstall action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S04",
+  "check": "pickup rows kept",
+  "pass": false,
+  "detail": "16 -> MISSING"
+ },
+ {
+  "scenario": "S04",
+  "check": "store stock kept",
+  "pass": false,
+  "detail": "3 -> MISSING"
+ },
+ {
+  "scenario": "S04",
+  "check": "no order loses its carrier",
+  "pass": false,
+  "detail": "0 -> 16 orders without carrier row"
+ },
+ {
+  "scenario": "S04",
+  "check": "module carrier no longer active",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "scenario": "S04",
+  "check": "settings kept",
+  "pass": false,
+  "detail": "T2=False, 0 keys"
+ },
+ {
+  "scenario": "S04",
+  "check": "reinstall succeeds",
+  "pass": true,
+  "detail": "Install action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S04",
+  "check": "old pickup rows still there",
+  "pass": false,
+  "detail": "{'everpsclickandcollect': 0, 'everpsclickandcollect_store_stock': 0, 'everpsclickandcollect_store': 10}"
+ },
+ {
+  "scenario": "S04",
+  "check": "old orders show pickup again in BO",
+  "pass": false,
+  "detail": "before ['6', '7', '8', '9'] / after []"
+ },
+ {
+  "scenario": "S04",
+  "check": "exactly 1 active module carrier",
+  "pass": true,
+  "detail": "[{'id_carrier': '8', 'id_reference': '8', 'deleted': '0', 'active': '1'}]"
+ },
+ {
+  "scenario": "S04",
+  "check": "carrier reused (no new carrier row)",
+  "pass": true,
+  "detail": "1 -> 1 rows"
+ },
+ {
+  "scenario": "S04",
+  "check": "store rows not duplicated",
+  "pass": false,
+  "detail": "5 -> 10"
+ },
+ {
+  "scenario": "S04",
+  "check": "settings survive reinstall",
+  "pass": false,
+  "detail": "T2='The number of customers in the shop varies, so we cannot guarantee your order will be ready as soon as you arrive.'"
+ },
+ {
+  "scenario": "S05",
+  "check": "reset succeeds",
+  "pass": true,
+  "detail": "Reset action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S05",
+  "check": "pickup rows kept",
+  "pass": false,
+  "detail": "16 -> 0"
+ },
+ {
+  "scenario": "S05",
+  "check": "old orders still show pickup",
+  "pass": false,
+  "detail": "{'6': '', '7': ''}"
+ },
+ {
+  "scenario": "S05",
+  "check": "no order loses its carrier",
+  "pass": false,
+  "detail": "0 -> 16"
+ },
+ {
+  "scenario": "S06",
+  "check": "CARRIER_ID follows the new carrier",
+  "pass": true,
+  "detail": "7 -> 8"
+ },
+ {
+  "scenario": "S06",
+  "check": "old orders still show pickup",
+  "pass": false,
+  "detail": "before ['6', '7', '8', '9'] / after []"
+ },
+ {
+  "scenario": "S06",
+  "check": "uninstall after edit keeps every carrier row",
+  "pass": true,
+  "detail": "0 orders without carrier"
+ },
+ {
+  "scenario": "S07",
+  "check": "upgrade succeeds",
+  "pass": true,
+  "detail": "Upgrade action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S07",
+  "check": "module active after upgrade",
+  "pass": true,
+  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '1'}"
+ },
+ {
+  "scenario": "S07",
+  "check": "all pickup rows kept",
+  "pass": true,
+  "detail": "16 -> 16"
+ },
+ {
+  "scenario": "S07",
+  "check": "stock rows kept",
+  "pass": true,
+  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+ },
+ {
+  "scenario": "S07",
+  "check": "pickup_* columns added",
+  "pass": true,
+  "detail": "['id_cart', 'id_store', 'delivery_date', 'delivery_hour', 'pickup_mode', 'pickup_periods', 'pickup_prepare', 'pickup_summary']"
+ },
+ {
+  "scenario": "S07",
+  "check": "same hooks as a fresh install",
+  "pass": true,
+  "detail": "missing [] / extra []"
+ },
+ {
+  "scenario": "S07",
+  "check": "same carrier, still active",
+  "pass": true,
+  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+ },
+ {
+  "scenario": "S07",
+  "check": "old orders still show pickup",
+  "pass": true,
+  "detail": "{'6': 'Pickup time Monday Change pickup time A · Pick up now B · Pick up later For \"Pick up later\": 1 to 3 time periods, leav', '7': 'Pickup time Friday Change pickup time A · Pick up now B · Pick up "
+ },
+ {
+  "scenario": "S07",
+  "check": "checkout can save a new choice",
+  "pass": true,
+  "detail": "{'returned': True}"
+ },
+ {
+  "scenario": "S08",
+  "check": "upgrade succeeds",
+  "pass": true,
+  "detail": "Upgrade action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S08",
+  "check": "module active after upgrade",
+  "pass": true,
+  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '1'}"
+ },
+ {
+  "scenario": "S08",
+  "check": "all pickup rows kept",
+  "pass": true,
+  "detail": "16 -> 16"
+ },
+ {
+  "scenario": "S08",
+  "check": "stock rows kept",
+  "pass": true,
+  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+ },
+ {
+  "scenario": "S08",
+  "check": "pickup_* columns added",
+  "pass": true,
+  "detail": "['id_cart', 'id_store', 'delivery_date', 'delivery_hour', 'pickup_mode', 'pickup_periods', 'pickup_prepare', 'pickup_summary']"
+ },
+ {
+  "scenario": "S08",
+  "check": "same hooks as a fresh install",
+  "pass": true,
+  "detail": "missing [] / extra []"
+ },
+ {
+  "scenario": "S08",
+  "check": "same carrier, still active",
+  "pass": true,
+  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+ },
+ {
+  "scenario": "S08",
+  "check": "old orders still show pickup",
+  "pass": true,
+  "detail": "{'6': 'Pickup time Friday 10/09/2026 10:00 - 11:00 Change pickup time A · Pick up now B · Pick up later For \"Pick up later\": ', '7': 'Pickup time Friday 10/09/2026 10:00 - 11:00 Change pickup time A ·"
+ },
+ {
+  "scenario": "S08",
+  "check": "checkout can save a new choice",
+  "pass": true,
+  "detail": "{'returned': True}"
+ },
+ {
+  "scenario": "S09",
+  "check": "every upgrade function returns true twice",
+  "pass": true,
+  "detail": "{'3.2.0': True, '3.3.0': True, '3.4.0': True} {'3.2.0': True, '3.3.0': True, '3.4.0': True}"
+ },
+ {
+  "scenario": "S09",
+  "check": "second run changes nothing",
+  "pass": true,
+  "detail": "0 changed rows []"
+ },
+ {
+  "scenario": "S10",
+  "check": "upgrade succeeds",
+  "pass": false,
+  "detail": "Cannot upgrade module everpsclickandcollect. To prevent any problem, this module has been turned off"
+ },
+ {
+  "scenario": "S10",
+  "check": "module active",
+  "pass": false,
+  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '0'}"
+ },
+ {
+  "scenario": "S10",
+  "check": "schema migrated",
+  "pass": false,
+  "detail": "['id_cart', 'id_store', 'delivery_date', 'delivery_hour']"
+ },
+ {
+  "scenario": "S10",
+  "check": "retry of the upgrade migrates the schema",
+  "pass": false,
+  "detail": "Upgrade action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S10",
+  "check": "after enable, checkout can save",
+  "pass": false,
+  "detail": "{'exception': \"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pickup_mode' in 'INSERT INTO'\"}"
+ },
+ {
+  "scenario": "S11",
+  "check": "upgrade reports failure",
+  "pass": true,
+  "detail": "01:33:44 CRITICAL  [console] Error thrown while running command \"prestashop:module upgrade everpsclickandcollect --env=prod --no-debug\". Message: \"SQLSTATE[4200"
+ },
+ {
+  "scenario": "S11",
+  "check": "no pickup row lost",
+  "pass": true,
+  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+ },
+ {
+  "scenario": "S11",
+  "check": "version NOT bumped (upgrade can be retried)",
+  "pass": true,
+  "detail": "{'id_module': '70', 'version': '3.1.1', 'active': '1'}"
+ },
+ {
+  "scenario": "S11",
+  "check": "checkout does not crash while schema is old",
+  "pass": false,
+  "detail": "{'exception': \"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pickup_mode' in 'INSERT INTO'\"}"
+ },
+ {
+  "scenario": "S11",
+  "check": "retry succeeds",
+  "pass": true,
+  "detail": "Upgrade action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S11",
+  "check": "checkout saves after retry",
+  "pass": true,
+  "detail": "{'returned': True}"
+ },
+ {
+  "scenario": "S12",
+  "check": "enable repairs the schema",
+  "pass": false,
+  "detail": "['id_cart', 'id_store', 'delivery_date', 'delivery_hour']"
+ },
+ {
+  "scenario": "S12",
+  "check": "checkout saves after enable",
+  "pass": false,
+  "detail": "{'exception': \"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pickup_mode' in 'INSERT INTO'\"}"
+ },
+ {
+  "scenario": "S12",
+  "check": "no pickup row lost",
+  "pass": true,
+  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+ },
+ {
+  "scenario": "S13",
+  "check": "install reports failure",
+  "pass": true,
+  "detail": "01:34:07 CRITICAL  [console] Error thrown while running command \"prestashop:module install everpsclickandcollect --env=prod --no-debug\". Mes"
+ },
+ {
+  "scenario": "S13",
+  "check": "module not left half-installed",
+  "pass": false,
+  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '1'}"
+ },
+ {
+  "scenario": "S13",
+  "check": "no active module carrier left behind",
+  "pass": false,
+  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+ },
+ {
+  "scenario": "S13",
+  "check": "retry install succeeds",
+  "pass": true,
+  "detail": "Install action on module everpsclickandcollect succeeded."
+ },
+ {
+  "scenario": "S13",
+  "check": "tab present after retry",
+  "pass": false,
+  "detail": "[]"
+ },
+ {
+  "scenario": "S13",
+  "check": "exactly 1 active module carrier",
+  "pass": true,
+  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+ },
+ {
+  "scenario": "S13",
+  "check": "at most 1 module carrier row",
+  "pass": true,
+  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+ },
+ {
+  "scenario": "S14",
+  "check": "3.3.0 still shows the time chosen with the new version",
+  "pass": false,
+  "detail": "store Click & collect pickup Store name Dade County Store address 3030 SW 8th St MiamiMiami, Florida 33135United States"
+ },
+ {
+  "scenario": "S14",
+  "check": "no data lost",
+  "pass": true,
+  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+ },
+ {
+  "scenario": "S15",
+  "check": "at most one store address per order",
+  "pass": false,
+  "detail": "{'before': 52, 'after': 55, 'errors': []}"
+ },
+ {
+  "scenario": "S16",
+  "check": "note",
+  "pass": null,
+  "detail": "no purge path in this version"
+ }
+]
