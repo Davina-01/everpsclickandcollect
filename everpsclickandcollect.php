@@ -24,18 +24,21 @@ if (!defined('_PS_VERSION_')) {
 use PrestaShop\PrestaShop\Core\Product\ProductExtraContent;
 require_once _PS_MODULE_DIR_.'everpsclickandcollect/models/EverpsclickandcollectStoreStock.php';
 require_once _PS_MODULE_DIR_.'everpsclickandcollect/models/EverpsclickandcollectStore.php';
+require_once _PS_MODULE_DIR_.'everpsclickandcollect/models/EverpsclickandcollectSlots.php';
 
 class Everpsclickandcollect extends CarrierModule
 {
     private $html;
     private $postErrors = array();
     private $postSuccess = array();
+    public $siteUrl;
+    public $isSeven;
 
     public function __construct()
     {
         $this->name = 'everpsclickandcollect';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.1.1';
+        $this->version = '3.2.0';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -69,17 +72,37 @@ class Everpsclickandcollect extends CarrierModule
             $this->registerHook('displayOrderConfirmation') &&
             $this->registerHook('displayPDFDeliverySlip') &&
             $this->registerHook('displayPDFInvoice') &&
-            $this->registerHook('displayAdminOrder') &&
+            $this->registerHook('displayAdminOrderMain') &&
+            $this->registerHook('actionValidateStepComplete') &&
+            $this->registerHook('actionOrderGridDefinitionModifier') &&
+            $this->registerHook('actionOrderGridQueryBuilderModifier') &&
             $this->registerHook('actionEmailSendBefore') &&
             $this->registerHook('actionUpdateQuantity') &&
             $this->registerHook('actionCarrierUpdate') &&
             $this->registerHook('displayAdminProductsQuantitiesStepBottom') &&
             $this->registerHook('actionObjectProductUpdateAfter') &&
             $this->registerHook('displayProductExtraContent') &&
-            $this->registerHook('actionUpdateQuantity') &&
             $this->registerHook('actionObjectProductDeleteAfter') &&
             $this->registerHook('actionOrderStatusUpdate') &&
-            $this->registerHook('actionValidateOrder');
+            $this->registerHook('actionValidateOrder') &&
+            $this->installSlotDefaults();
+    }
+
+    public function installSlotDefaults()
+    {
+        $defaults = array(
+            'EVERPSCLICKANDCOLLECT_SLOT_DURATION' => EverpsclickandcollectSlots::DEFAULT_DURATION,
+            'EVERPSCLICKANDCOLLECT_LEAD_TIME' => EverpsclickandcollectSlots::DEFAULT_LEAD_TIME,
+            'EVERPSCLICKANDCOLLECT_DAYS_AHEAD' => EverpsclickandcollectSlots::DEFAULT_DAYS_AHEAD,
+            'EVERPSCLICKANDCOLLECT_SLOT_MAX' => 0,
+            'EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT' => 0,
+        );
+        foreach ($defaults as $key => $value) {
+            if (Configuration::get($key) === false) {
+                Configuration::updateValue($key, $value);
+            }
+        }
+        return true;
     }
 
     public function uninstall()
@@ -91,9 +114,19 @@ class Everpsclickandcollect extends CarrierModule
         );
         $carrier->delete();
         Configuration::deleteByName('EVERPSCLICKANDCOLLECT_CARRIER_ID');
-        Configuration::deleteByName('EVERPSCLICKANDCOLLECT_ASK_DATE');
-        return parent::uninstall()
-            && $this->uninstallModuleTab('AdminEverPsClickAndCollect');
+        foreach (array(
+            'EVERPSCLICKANDCOLLECT_ASK_DATE',
+            'EVERPSCLICKANDCOLLECT_SLOT_DURATION',
+            'EVERPSCLICKANDCOLLECT_LEAD_TIME',
+            'EVERPSCLICKANDCOLLECT_DAYS_AHEAD',
+            'EVERPSCLICKANDCOLLECT_SLOT_MAX',
+            'EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT',
+            'EVERPSCLICKANDCOLLECT_CLOSED_DATES',
+        ) as $key) {
+            Configuration::deleteByName($key);
+        }
+        $this->uninstallModuleTab('AdminEverPsClickAndCollect');
+        return parent::uninstall();
     }
 
     private function installModuleTab($tabClass, $parent, $tabName)
@@ -117,7 +150,12 @@ class Everpsclickandcollect extends CarrierModule
 
     private function uninstallModuleTab($tabClass)
     {
-        $tab = new Tab((int)Tab::getIdFromClassName($tabClass));
+        $idTab = (int)Tab::getIdFromClassName($tabClass);
+        if (!$idTab) {
+            // Tab is not installed by this module anymore
+            return true;
+        }
+        $tab = new Tab($idTab);
 
         return $tab->delete();
     }
@@ -174,9 +212,6 @@ class Everpsclickandcollect extends CarrierModule
 
         $this->html .= $this->context->smarty->fetch($this->local_path.'views/templates/admin/header.tpl');
 
-        if ($this->checkLatestEverModuleVersion($this->name, $this->version)) {
-            $this->html .= $this->context->smarty->fetch($this->local_path.'views/templates/admin/upgrade.tpl');
-        }
         $this->html .= $this->renderForm();
         $this->html .= $this->context->smarty->fetch($this->local_path.'views/templates/admin/footer.tpl');
 
@@ -256,9 +291,9 @@ class Everpsclickandcollect extends CarrierModule
                     ),
                     array(
                         'type' => 'switch',
-                        'label' => $this->l('Show date select'),
-                        'desc' => $this->l('Set yes to ask customer to select a date'),
-                        'hint' => $this->l('Else no date will be asked'),
+                        'label' => $this->l('Ask for pickup date and time slots'),
+                        'desc' => $this->l('Customer must choose a pickup date and one or more time slots during checkout'),
+                        'hint' => $this->l('Slots are built from the store opening hours (Shop parameters > Contact > Stores)'),
                         'name' => 'EVERPSCLICKANDCOLLECT_ASK_DATE',
                         'is_bool' => true,
                         'values' => array(
@@ -273,6 +308,51 @@ class Everpsclickandcollect extends CarrierModule
                                 'label' => $this->l('No')
                             )
                         ),
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Time slot length (minutes)'),
+                        'desc' => $this->l('30 = one slot every half hour'),
+                        'name' => 'EVERPSCLICKANDCOLLECT_SLOT_DURATION',
+                        'class' => 'fixed-width-sm',
+                        'suffix' => 'min',
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Minimum preparation time (minutes)'),
+                        'desc' => $this->l('Slots starting sooner than this after ordering are hidden. 120 = 2 hours'),
+                        'name' => 'EVERPSCLICKANDCOLLECT_LEAD_TIME',
+                        'class' => 'fixed-width-sm',
+                        'suffix' => 'min',
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Bookable days ahead'),
+                        'desc' => $this->l('How many days in advance customers can book (max 60)'),
+                        'name' => 'EVERPSCLICKANDCOLLECT_DAYS_AHEAD',
+                        'class' => 'fixed-width-sm',
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Maximum orders per time slot'),
+                        'desc' => $this->l('0 = unlimited. Full slots cannot be selected anymore'),
+                        'name' => 'EVERPSCLICKANDCOLLECT_SLOT_MAX',
+                        'class' => 'fixed-width-sm',
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Maximum slots a customer can select'),
+                        'desc' => $this->l('0 = unlimited'),
+                        'name' => 'EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT',
+                        'class' => 'fixed-width-sm',
+                    ),
+                    array(
+                        'type' => 'textarea',
+                        'label' => $this->l('Closed dates (holidays)'),
+                        'desc' => $this->l('One date per line, format YYYY-MM-DD, e.g. 2026-12-25'),
+                        'name' => 'EVERPSCLICKANDCOLLECT_CLOSED_DATES',
+                        'autoload_rte' => false,
+                        'rows' => 5,
                     ),
                     array(
                         'type' => 'switch',
@@ -447,6 +527,12 @@ class Everpsclickandcollect extends CarrierModule
             'EVERPSCLICKANDCOLLECT_STOCK' => Configuration::get(
                 'EVERPSCLICKANDCOLLECT_STOCK'
             ),
+            'EVERPSCLICKANDCOLLECT_SLOT_DURATION' => Tools::getValue('EVERPSCLICKANDCOLLECT_SLOT_DURATION', Configuration::get('EVERPSCLICKANDCOLLECT_SLOT_DURATION')),
+            'EVERPSCLICKANDCOLLECT_LEAD_TIME' => Tools::getValue('EVERPSCLICKANDCOLLECT_LEAD_TIME', Configuration::get('EVERPSCLICKANDCOLLECT_LEAD_TIME')),
+            'EVERPSCLICKANDCOLLECT_DAYS_AHEAD' => Tools::getValue('EVERPSCLICKANDCOLLECT_DAYS_AHEAD', Configuration::get('EVERPSCLICKANDCOLLECT_DAYS_AHEAD')),
+            'EVERPSCLICKANDCOLLECT_SLOT_MAX' => Tools::getValue('EVERPSCLICKANDCOLLECT_SLOT_MAX', Configuration::get('EVERPSCLICKANDCOLLECT_SLOT_MAX')),
+            'EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT' => Tools::getValue('EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT', Configuration::get('EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT')),
+            'EVERPSCLICKANDCOLLECT_CLOSED_DATES' => Tools::getValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES', Configuration::get('EVERPSCLICKANDCOLLECT_CLOSED_DATES')),
             'EVERPSCLICKANDCOLLECT_TAB' => Configuration::get(
                 'EVERPSCLICKANDCOLLECT_TAB'
             ),
@@ -520,6 +606,26 @@ class Everpsclickandcollect extends CarrierModule
                     'Error : The field "Send order to store by email" is not valid'
                 );
             }
+            $duration = Tools::getValue('EVERPSCLICKANDCOLLECT_SLOT_DURATION');
+            if (!Validate::isUnsignedInt($duration) || (int) $duration < 5 || (int) $duration > 240) {
+                $this->postErrors[] = $this->l('Error : time slot length must be between 5 and 240 minutes');
+            }
+            foreach (array(
+                'EVERPSCLICKANDCOLLECT_LEAD_TIME' => $this->l('Minimum preparation time'),
+                'EVERPSCLICKANDCOLLECT_DAYS_AHEAD' => $this->l('Bookable days ahead'),
+                'EVERPSCLICKANDCOLLECT_SLOT_MAX' => $this->l('Maximum orders per time slot'),
+                'EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT' => $this->l('Maximum slots a customer can select'),
+            ) as $key => $label) {
+                if (!Validate::isUnsignedInt(Tools::getValue($key))) {
+                    $this->postErrors[] = sprintf($this->l('Error : "%s" must be a positive number'), $label);
+                }
+            }
+            foreach (preg_split('/[\s,;]+/', (string) Tools::getValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES')) as $line) {
+                $line = trim($line);
+                if ($line !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $line)) {
+                    $this->postErrors[] = sprintf($this->l('Error : closed date "%s" must use the YYYY-MM-DD format'), $line);
+                }
+            }
             // Multilingual validation
             foreach (Language::getLanguages(false) as $lang) {
                 if (Tools::getValue('EVERPSCLICKANDCOLLECT_MSG_'.$lang['id_lang'])
@@ -587,6 +693,22 @@ class Everpsclickandcollect extends CarrierModule
             $msg,
             true
         );
+        foreach (array(
+            'EVERPSCLICKANDCOLLECT_SLOT_DURATION',
+            'EVERPSCLICKANDCOLLECT_LEAD_TIME',
+            'EVERPSCLICKANDCOLLECT_DAYS_AHEAD',
+            'EVERPSCLICKANDCOLLECT_SLOT_MAX',
+            'EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT',
+        ) as $key) {
+            Configuration::updateValue($key, (int) Tools::getValue($key));
+        }
+        $posted = array();
+        foreach (preg_split('/[\s,;]+/', (string) Tools::getValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES')) as $line) {
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($line))) {
+                $posted[] = trim($line);
+            }
+        }
+        Configuration::updateValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES', implode("\n", array_unique($posted)));
         $this->postSuccess[] = $this->l('All settings have been saved');
     }
 
@@ -712,11 +834,18 @@ class Everpsclickandcollect extends CarrierModule
      */
     public function hookDisplayHeader()
     {
-        $controller_name = Tools::getValue('controller');
-        if ($controller_name == 'order') {
-            $this->context->controller->addJS($this->_path.'/views/js/order.js');
+        $controller = $this->context->controller;
+        if (isset($controller->php_self) && $controller->php_self == 'order') {
+            $controller->registerJavascript(
+                'module-everpsclickandcollect-order',
+                'modules/'.$this->name.'/views/js/order.js',
+                array('position' => 'bottom', 'priority' => 200)
+            );
         }
-        $this->context->controller->addCSS($this->_path.'/views/css/front.css');
+        $controller->registerStylesheet(
+            'module-everpsclickandcollect-front',
+            'modules/'.$this->name.'/views/css/front.css'
+        );
     }
 
     public function hookActionCarrierUpdate($params)
@@ -735,104 +864,223 @@ class Everpsclickandcollect extends CarrierModule
 
     public function hookDisplayCarrierExtraContent($params)
     {
-        // Tools::clearAllCache();
         $cart = Context::getContext()->cart;
-        $cartproducts = $cart->getProducts();
+        $idLang = (int) Context::getContext()->language->id;
         $stores = $this->getTemplateVarStores();
-        $evercnc_id_store = Context::getContext()->cookie->__get('everclickncollect_id');
-        $everclickncollect_date = Context::getContext()->cookie->__get('everclickncollect_date');
         $msg = $this->getConfigInMultipleLangs('EVERPSCLICKANDCOLLECT_MSG');
-        $custom_msg = $msg[(int) Context::getContext()->language->id];
+        $custom_msg = isset($msg[$idLang]) ? $msg[$idLang] : '';
+        $askDate = (bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE');
+        $current = $this->getCartPickup((int) $cart->id);
+        $selectedStoreId = $current ? (int) $current['id_store'] : 0;
+        if (!$selectedStoreId) {
+            $selectedStoreId = (int) Context::getContext()->cookie->__get('everclickncollect_id');
+        }
         $shipping_stores = array();
-        foreach ($stores as $key => $store) {
+        foreach ($stores as $store) {
             if ((bool)$this->isAllowedStore((int) $store['id_store']) === false) {
                 continue;
             }
-            if ($evercnc_id_store) {
-                if ((int) $store['id_store'] == (int) $evercnc_id_store) {
-                    $store['selected'] = true;
-                } else {
-                    $store['selected'] = false;
-                }
-            } else {
-                if ($key == 0) {
-                    $store['selected'] = true;
-                } else {
-                    $store['selected'] = false;
-                }
-            }
-            if ((bool)$store['selected'] === true) {
-                if ((bool)Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE') === true) {
-                    $delivery_date = $store['business_hours'][0]['day'];
-                } else {
-                    $delivery_date = null;
-                }
-                Db::getInstance()->insert(
-                    'everpsclickandcollect',
-                    array(
-                        'id_cart' => (int) $cart->id,
-                        'id_store' => (int) $store['id_store'],
-                        'delivery_date' => $delivery_date
-                    ),
-                    false,
-                    true,
-                    Db::REPLACE
-                );
-                $this->context->cookie->__set(
-                    'everclickncollect_id',
-                    (int) $store['id_store']
-                );
-            }
             // Manage stock on each store and product if allowed
-            if ((bool)Configuration::get('EVERPSCLICKANDCOLLECT_STOCK') === true) {
-                $is_store_available = EverpsclickandcollectStoreStock::isCartAvailableForStore(
+            if ((bool)Configuration::get('EVERPSCLICKANDCOLLECT_STOCK') === true
+                && !(bool)EverpsclickandcollectStoreStock::isCartAvailableForStore(
                     (object)$cart,
                     (int) $store['id_store']
-                );
-                if ((bool)$is_store_available === true) {
-                    $store_hours = EverpsclickandcollectStore::getByIdStore(
-                        (int) $store['id_store']
-                    );
-                    $obj_merged = (array)array_merge((array)$store, (array)$store_hours);
-                    $shipping_stores[] = $obj_merged;
-                }
-            } else {
-                $store_hours = EverpsclickandcollectStore::getByIdStore(
-                    (int) $store['id_store']
-                );
-                $obj_merged = (array)array_merge((array)$store, (array)$store_hours);
-                $shipping_stores[] = $obj_merged;
+                )
+            ) {
+                continue;
             }
+            if ($askDate) {
+                $store['pickup_days'] = EverpsclickandcollectSlots::getAvailableDays(
+                    (int) $store['id_store'],
+                    $idLang,
+                    (int) $cart->id,
+                    $this->getDayNames()
+                );
+            } else {
+                $store['pickup_days'] = array();
+            }
+            $shipping_stores[] = $store;
         }
-        $link = new Link();
-        $ajax_url = $link->getModuleLink(
-            $this->name,
-            'ajaxEverShippingStore'
-        );
         if (empty($shipping_stores)) {
             $this->smarty->assign(
                 array(
                     'everclickncollect_id' => Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
                 )
             );
-            return $this->display(__FILE__, 'no_carrier.tpl', $this->getCacheId());
+            return $this->display(__FILE__, 'no_carrier.tpl');
         }
-        if ($shipping_stores && count($shipping_stores) > 0) {
-            $only_one = count($shipping_stores) > 1 ? false : true;
-            $this->smarty->assign(
-                array(
-                    'custom_msg' => $custom_msg,
-                    'everclickncollect_date' => $everclickncollect_date,
-                    'ask_date' => Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE'),
-                    'show_store_img' => Configuration::get('EVERPSCLICKANDCOLLECT_IMG'),
-                    'only_one' => $only_one,
-                    'ajax_url' => $ajax_url,
-                    'stores' => $shipping_stores,
-                    'everclickncollect_id' => Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
-                )
-            );
-            return $this->display(__FILE__, 'extra_carrier.tpl', $this->getCacheId());
+        // Make sure the selected store is still available, else take the first one
+        $storeIds = array_map(function ($s) {
+            return (int) $s['id_store'];
+        }, $shipping_stores);
+        if (!in_array($selectedStoreId, $storeIds)) {
+            $selectedStoreId = $storeIds[0];
         }
+        $selectedDate = '';
+        $selectedSlots = array();
+        if ($current && (int) $current['id_store'] === $selectedStoreId) {
+            $selectedDate = (string) $current['delivery_date'];
+            $selectedSlots = EverpsclickandcollectSlots::splitSlots($current['delivery_hour']);
+        } else {
+            $this->savePickup((int) $cart->id, $selectedStoreId, null, array());
+        }
+        $this->context->cookie->__set('everclickncollect_id', $selectedStoreId);
+        foreach ($shipping_stores as &$store) {
+            $store['selected'] = (int) $store['id_store'] === $selectedStoreId;
+        }
+        unset($store);
+        $settings = EverpsclickandcollectSlots::getSettings();
+        $this->smarty->assign(
+            array(
+                'custom_msg' => $custom_msg,
+                'ask_date' => $askDate,
+                'show_store_img' => Configuration::get('EVERPSCLICKANDCOLLECT_IMG'),
+                'only_one' => count($shipping_stores) === 1,
+                'ajax_url' => $this->context->link->getModuleLink($this->name, 'ajaxEverShippingStore'),
+                'stores' => $shipping_stores,
+                'selected_store_id' => $selectedStoreId,
+                'selected_date' => $selectedDate,
+                'selected_slots' => array_fill_keys($selectedSlots, true),
+                'max_selected' => $settings['max_selected'],
+                'everclickncollect_id' => Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
+            )
+        );
+        return $this->display(__FILE__, 'extra_carrier.tpl');
+    }
+
+    /**
+     * Checkout "Shipping method" step: block "Continue" until a valid date and slots are chosen.
+     * Only called by PrestaShop when this module's carrier is selected.
+     */
+    public function hookActionValidateStepComplete($params)
+    {
+        if (!isset($params['step_name']) || $params['step_name'] !== 'delivery') {
+            return;
+        }
+        $request = isset($params['request_params']) ? (array) $params['request_params'] : array();
+        $cart = $this->context->cart;
+        $idLang = (int) $this->context->language->id;
+        $idStore = isset($request['everpsclickandcollect']) ? (int) $request['everpsclickandcollect'] : 0;
+        if (!$idStore) {
+            $current = $this->getCartPickup((int) $cart->id);
+            $idStore = $current ? (int) $current['id_store'] : 0;
+        }
+        if (!$idStore || !$this->isAllowedStore($idStore)) {
+            $this->addCheckoutError($this->l('Please choose the store where you will pick up your order.'));
+            $params['completed'] = false;
+            return;
+        }
+        if (!(bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE')) {
+            $this->savePickup((int) $cart->id, $idStore, null, array());
+            return;
+        }
+        $date = isset($request['evercnc_date'][$idStore]) ? (string) $request['evercnc_date'][$idStore] : '';
+        $slots = isset($request['evercnc_slots'][$idStore]) ? (array) $request['evercnc_slots'][$idStore] : array();
+        $slots = EverpsclickandcollectSlots::splitSlots($slots);
+        $errors = EverpsclickandcollectSlots::validateSelection($idStore, $idLang, (int) $cart->id, $date, $slots);
+        if ($errors) {
+            $this->addCheckoutError($this->getSlotErrorMessage($errors[0]));
+            $params['completed'] = false;
+            return;
+        }
+        $this->savePickup((int) $cart->id, $idStore, $date, $slots);
+    }
+
+    public function getSlotErrorMessage($code)
+    {
+        switch ($code) {
+            case 'no_date':
+                return $this->l('Please choose a pickup date.');
+            case 'no_slot':
+                return $this->l('Please choose at least one pickup time slot.');
+            case 'too_many':
+                return sprintf(
+                    $this->l('You can choose up to %d time slots.'),
+                    (int) Configuration::get('EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT')
+                );
+            case 'full_slot':
+                return $this->l('Sorry, one of the selected time slots is now full. Please choose another one.');
+            default:
+                return $this->l('The selected pickup date or time slot is no longer available. Please choose another one.');
+        }
+    }
+
+    protected function addCheckoutError($message)
+    {
+        if (isset($this->context->controller) && property_exists($this->context->controller, 'errors')) {
+            $this->context->controller->errors[] = $message;
+        }
+    }
+
+    /**
+     * Translated week day names, 0 = Monday
+     */
+    public function getDayNames()
+    {
+        return array(
+            $this->trans('Monday', [], 'Shop.Theme.Global'),
+            $this->trans('Tuesday', [], 'Shop.Theme.Global'),
+            $this->trans('Wednesday', [], 'Shop.Theme.Global'),
+            $this->trans('Thursday', [], 'Shop.Theme.Global'),
+            $this->trans('Friday', [], 'Shop.Theme.Global'),
+            $this->trans('Saturday', [], 'Shop.Theme.Global'),
+            $this->trans('Sunday', [], 'Shop.Theme.Global'),
+        );
+    }
+
+    public function getCartPickup($idCart)
+    {
+        if (!(int) $idCart) {
+            return false;
+        }
+        return Db::getInstance()->getRow(
+            'SELECT * FROM `' . _DB_PREFIX_ . 'everpsclickandcollect` WHERE id_cart = ' . (int) $idCart
+        );
+    }
+
+    public function savePickup($idCart, $idStore, $date, array $slots)
+    {
+        if (!(int) $idCart) {
+            return false;
+        }
+        return Db::getInstance()->insert(
+            'everpsclickandcollect',
+            array(
+                'id_cart' => (int) $idCart,
+                'id_store' => (int) $idStore,
+                'delivery_date' => $date ? pSQL($date) : null,
+                'delivery_hour' => $slots ? pSQL(implode(',', EverpsclickandcollectSlots::splitSlots($slots))) : null,
+            ),
+            true,
+            true,
+            Db::REPLACE
+        );
+    }
+
+    /**
+     * Human readable pickup date and slots for templates, PDF and emails
+     */
+    public function getPickupLabels($clickncollect, $idLang = null)
+    {
+        $labels = array('date' => '', 'slots' => '');
+        if (!$clickncollect) {
+            return $labels;
+        }
+        $date = (string) $clickncollect['delivery_date'];
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $dayNames = $this->getDayNames();
+            $weekday = (int) date('N', strtotime($date)) - 1;
+            $language = $idLang ? new Language((int) $idLang) : $this->context->language;
+            $format = (Validate::isLoadedObject($language) && $language->date_format_lite)
+                ? $language->date_format_lite
+                : 'Y-m-d';
+            $labels['date'] = $dayNames[$weekday] . ' ' . date($format, strtotime($date));
+        } else {
+            // Orders made with version < 3.2.0 only stored a week day
+            $labels['date'] = $date;
+        }
+        $labels['slots'] = EverpsclickandcollectSlots::humanizeSlots($clickncollect['delivery_hour']);
+        return $labels;
     }
 
     public function hookDisplayReassurance($params)
@@ -874,7 +1122,8 @@ class Everpsclickandcollect extends CarrierModule
                             $store_hours = EverpsclickandcollectStore::getByIdStore(
                                 (int) $store['id_store']
                             );
-                            $obj_merged = (array)array_merge((array)$store, (array)$store_hours);
+                            // Do not merge the hours object: its "id" would overwrite the store id
+                            $obj_merged = $store;
                             $shipping_stores[] = $obj_merged;
                         }
                     }
@@ -890,7 +1139,8 @@ class Everpsclickandcollect extends CarrierModule
                         $store_hours = EverpsclickandcollectStore::getByIdStore(
                             (int) $store['id_store']
                         );
-                        $obj_merged = (array)array_merge((array)$store, (array)$store_hours);
+                        // Do not merge the hours object: its "id" would overwrite the store id
+                            $obj_merged = $store;
                         $shipping_stores[] = $obj_merged;
                     }
                 }
@@ -901,7 +1151,8 @@ class Everpsclickandcollect extends CarrierModule
                 $store_hours = EverpsclickandcollectStore::getByIdStore(
                     (int) $store['id_store']
                 );
-                $obj_merged = (array)array_merge((array)$store, (array)$store_hours);
+                // Do not merge the hours object: its "id" would overwrite the store id
+                            $obj_merged = $store;
                 $shipping_stores[] = $obj_merged;
             }
         }
@@ -969,7 +1220,8 @@ class Everpsclickandcollect extends CarrierModule
                             $store_hours = EverpsclickandcollectStore::getByIdStore(
                                 (int) $store['id_store']
                             );
-                            $obj_merged = (array)array_merge((array)$store, (array)$store_hours);
+                            // Do not merge the hours object: its "id" would overwrite the store id
+                            $obj_merged = $store;
                             $shipping_stores[] = $obj_merged;
                         }
                     }
@@ -985,7 +1237,8 @@ class Everpsclickandcollect extends CarrierModule
                         $store_hours = EverpsclickandcollectStore::getByIdStore(
                             (int) $store['id_store']
                         );
-                        $obj_merged = (array)array_merge((array)$store, (array)$store_hours);
+                        // Do not merge the hours object: its "id" would overwrite the store id
+                            $obj_merged = $store;
                         $shipping_stores[] = $obj_merged;
                     }
                 }
@@ -996,7 +1249,8 @@ class Everpsclickandcollect extends CarrierModule
                 $store_hours = EverpsclickandcollectStore::getByIdStore(
                     (int) $store['id_store']
                 );
-                $obj_merged = (array)array_merge((array)$store, (array)$store_hours);
+                // Do not merge the hours object: its "id" would overwrite the store id
+                            $obj_merged = $store;
                 $shipping_stores[] = $obj_merged;
             }
         }
@@ -1031,143 +1285,97 @@ class Everpsclickandcollect extends CarrierModule
 
     public function hookActionEmailSendBefore($params)
     {
-        if (isset($params['templateVars']['{id_order}'])
-            && isset($params['templateVars']['{carrier}'])
-            && isset($params['templateVars']['{shipping_number}'])
+        if (!isset($params['templateVars']['{id_order}'])
+            || !isset($params['templateVars']['{carrier}'])
         ) {
-            $id_order = (int) $params['templateVars'] ["{id_order}"];
-            $order = new Order(
-                (int) $id_order
-            );
-            if ((int) $order->id_carrier != (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')) {
-                return;
-            }
-            $sql = new DbQuery;
-            $sql->select('*');
-            $sql->from(
-                'everpsclickandcollect'
-            );
-            $sql->where(
-                'id_cart = '.(int) $order->id_cart
-            );
-            $clickncollect = Db::getInstance()->getRow($sql);
-            if ($clickncollect) {
-                $stores = $this->getTemplateVarStores();
-                foreach ($stores as $tpl_store) {
-                    if ((int) $tpl_store['id_store'] == (int) $clickncollect['id_store']) {
-                        $store = $tpl_store;
-                    }
-                }
-                // Replace carrier var
-                $params['templateVars'] ["{carrier}"] = $params['templateVars'] ["{carrier}"]
-                .' '
-                .$store['name']
-                .' '
-                .$store['address']['formatted'];
-                // Replace shipping number var
-                $params['templateVars'] ["{shipping_number}"] = $params['templateVars'] ["{shipping_number}"]
-                .' - '
-                .$store['name']
-                .' '
-                .$store['address']['formatted'];
+            return;
+        }
+        $order = new Order((int) $params['templateVars']['{id_order}']);
+        if (!Validate::isLoadedObject($order)
+            || (int) $order->id_carrier != (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
+        ) {
+            return;
+        }
+        $clickncollect = $this->getCartPickup((int) $order->id_cart);
+        if (!$clickncollect) {
+            return;
+        }
+        $store = $this->getTemplateStore((int) $clickncollect['id_store']);
+        if (!$store) {
+            return;
+        }
+        $labels = $this->getPickupLabels($clickncollect, (int) $order->id_lang);
+        $pickup = $store['name'] . ' ' . strip_tags(str_replace('<br />', ', ', $store['address']['formatted']));
+        if ($labels['date']) {
+            $pickup .= ' - ' . $labels['date'];
+            if ($labels['slots']) {
+                $pickup .= ' ' . $labels['slots'];
             }
         }
-        return $params;
+        $params['templateVars']['{carrier}'] = $params['templateVars']['{carrier}'] . ' : ' . $pickup;
+        if (isset($params['templateVars']['{shipping_number}'])) {
+            $params['templateVars']['{shipping_number}'] = $params['templateVars']['{shipping_number}'] . ' - ' . $pickup;
+        }
+    }
+
+    /**
+     * Store presented like on the stores page, merged with its hours
+     */
+    protected function getTemplateStore($idStore)
+    {
+        foreach ($this->getTemplateVarStores() as $tpl_store) {
+            if ((int) $tpl_store['id_store'] == (int) $idStore) {
+                return $tpl_store;
+            }
+        }
+        return false;
+    }
+
+    protected function renderPickupInfo($order, $template)
+    {
+        if (!Validate::isLoadedObject($order)
+            || (int) $order->id_carrier != (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
+        ) {
+            return;
+        }
+        $clickncollect = $this->getCartPickup((int) $order->id_cart);
+        if (!$clickncollect) {
+            return;
+        }
+        $store = $this->getTemplateStore((int) $clickncollect['id_store']);
+        if (!$store) {
+            return;
+        }
+        $labels = $this->getPickupLabels($clickncollect, (int) $order->id_lang);
+        $this->context->smarty->assign(array(
+            'store' => $store,
+            'clickncollect' => $clickncollect,
+            'pickup_date' => $labels['date'],
+            'pickup_slots' => $labels['slots'],
+        ));
+        return $this->display(__FILE__, 'views/templates/hook/' . $template);
     }
 
     public function hookDisplayOrderConfirmation($params)
     {
-        $id_order = (int) $params['order']->id;
-        $order = new Order(
-            (int) $id_order
-        );
-        if ((int) $order->id_carrier != (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')) {
+        $order = isset($params['order']) ? $params['order'] : null;
+        if (!$order instanceof Order) {
             return;
         }
-        $evercnc_id_store = Context::getContext()->cookie->__get('everclickncollect_id');
-        $everclickncollect_date = Context::getContext()->cookie->__get('everclickncollect_date');
-        if (!empty($evercnc_id_store)) {
-            return;
-        }
-        $sql = new DbQuery;
-        $sql->select('*');
-        $sql->from(
-            'everpsclickandcollect'
-        );
-        $sql->where(
-            'id_cart = '.(int) $order->id_cart
-        );
-        $clickncollect = Db::getInstance()->getRow($sql);
-        if (!$clickncollect) {
-            Db::getInstance()->insert(
-                'everpsclickandcollect',
-                array(
-                    'id_cart' => (int) $order->id_cart,
-                    'id_store' => (int) $evercnc_id_store,
-                    'delivery_date' => (string)$everclickncollect_date
-                ),
-                false,
-                true,
-                Db::REPLACE
-            );
-        }
-        $stores = $this->getTemplateVarStores();
-        foreach ($stores as $tpl_store) {
-            if ((int) $tpl_store['id_store'] == (int) $clickncollect['id_store']) {
-                $store_hours = EverpsclickandcollectStore::getByIdStore(
-                    (int) $tpl_store['id_store']
-                );
-                $obj_merged = (array)array_merge((array)$tpl_store, (array)$store_hours);
-                $store = $obj_merged;
-            }
-        }
-        // Here we should decrement store stock, but action stock hook is triggered
-        if (isset($store)) {
-            $this->context->smarty->assign(array(
-                'store' => $store,
-                'clickncollect' => $clickncollect
-            ));
-            Context::getContext()->cookie->__unset('everclickncollect_id');
-            Context::getContext()->cookie->__unset('everclickncollect_date');
-            return $this->display(__FILE__, 'views/templates/hook/order.tpl');
-        }
+        Context::getContext()->cookie->__unset('everclickncollect_id');
+        Context::getContext()->cookie->__unset('everclickncollect_date');
+        return $this->renderPickupInfo($order, 'order.tpl');
+    }
+
+    public function hookDisplayAdminOrderMain($params)
+    {
+        return $this->renderPickupInfo(new Order((int) $params['id_order']), 'order.tpl');
     }
 
     public function hookDisplayAdminOrder($params)
     {
-        $id_order = (int) $params['id_order'];
-        $order = new Order(
-            (int) $id_order
-        );
-        if ((int) $order->id_carrier != (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')) {
-            return;
-        }
-        $sql = new DbQuery;
-        $sql->select('*');
-        $sql->from(
-            'everpsclickandcollect'
-        );
-        $sql->where(
-            'id_cart = '.(int) $order->id_cart
-        );
-        $clickncollect = Db::getInstance()->getRow($sql);
-        if ($clickncollect) {
-            $stores = $this->getTemplateVarStores();
-            foreach ($stores as $tpl_store) {
-                if ((int) $tpl_store['id_store'] == (int) $clickncollect['id_store']) {
-                    $store_hours = EverpsclickandcollectStore::getByIdStore(
-                        (int) $tpl_store['id_store']
-                    );
-                    $obj_merged = (array)array_merge((array)$tpl_store, (array)$store_hours);
-                    $store = $obj_merged;
-                }
-            }
-            $this->context->smarty->assign(array(
-                'store' => $store,
-                'clickncollect' => $clickncollect
-            ));
-            return $this->display(__FILE__, 'views/templates/hook/order.tpl');
-        }
+        // Kept for shops where the module was installed before 3.2.0
+        return $this->hookDisplayAdminOrderMain($params);
     }
 
     public function hookDisplayPDFDeliverySlip($params)
@@ -1177,42 +1385,59 @@ class Everpsclickandcollect extends CarrierModule
 
     public function hookDisplayPDFInvoice($params)
     {
-        $id_order = (int) $params['object']->id_order;
-        $order = new Order(
-            (int) $id_order
+        return $this->renderPickupInfo(new Order((int) $params['object']->id_order), 'invoice.tpl');
+    }
+
+    /**
+     * Back office order list: add a "Pickup" column, filterable by date (e.g. 2026-10-09)
+     */
+    public function hookActionOrderGridDefinitionModifier($params)
+    {
+        $definition = $params['definition'];
+        $columnClass = class_exists('PrestaShop\PrestaShop\Core\Grid\Column\Type\Common\DataColumn')
+            ? 'PrestaShop\PrestaShop\Core\Grid\Column\Type\Common\DataColumn'
+            : 'PrestaShop\PrestaShop\Core\Grid\Column\Type\DataColumn';
+        $column = new $columnClass('evercnc_pickup');
+        $column->setName($this->l('Pickup'))
+            ->setOptions(array(
+                'field' => 'evercnc_pickup',
+                'sortable' => false,
+            ));
+        $definition->getColumns()->addAfter('date_add', $column);
+        $filter = new PrestaShop\PrestaShop\Core\Grid\Filter\Filter(
+            'evercnc_pickup',
+            'Symfony\Component\Form\Extension\Core\Type\TextType'
         );
-        if ((int) $order->id_carrier != (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')) {
-            return;
-        }
-        $sql = new DbQuery;
-        $sql->select('*');
-        $sql->from(
-            'everpsclickandcollect'
-        );
-        $sql->where(
-            'id_cart = '.(int) $order->id_cart
-        );
-        $clickncollect = Db::getInstance()->getRow($sql);
-        if ($clickncollect) {
-            $stores = $this->getTemplateVarStores();
-            foreach ($stores as $tpl_store) {
-                if ((int) $tpl_store['id_store'] == (int) $clickncollect['id_store']) {
-                    $store_hours = EverpsclickandcollectStore::getByIdStore(
-                        (int) $tpl_store['id_store']
-                    );
-                    $obj_merged = (array)array_merge((array)$tpl_store, (array)$store_hours);
-                    $store = $obj_merged;
-                }
+        $filter->setTypeOptions(array(
+            'required' => false,
+            'attr' => array('placeholder' => 'YYYY-MM-DD'),
+        ))->setAssociatedColumn('evercnc_pickup');
+        $definition->getFilters()->add($filter);
+    }
+
+    public function hookActionOrderGridQueryBuilderModifier($params)
+    {
+        $filters = $params['search_criteria']->getFilters();
+        foreach (array('search_query_builder', 'count_query_builder') as $key) {
+            if (!isset($params[$key])) {
+                continue;
             }
-            $this->context->smarty->assign(array(
-                'store' => $store,
-                'clickncollect' => $clickncollect
-            ));
-            $this->context->smarty->assign(array(
-                'store' => $store,
-                'clickncollect' => $clickncollect
-            ));
-            return $this->display(__FILE__, 'views/templates/hook/invoice.tpl');
+            $qb = $params[$key];
+            $qb->leftJoin(
+                'o',
+                _DB_PREFIX_ . 'everpsclickandcollect',
+                'evercnc',
+                'evercnc.id_cart = o.id_cart AND o.id_carrier = ' . (int) Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
+            );
+            if ($key === 'search_query_builder') {
+                $qb->addSelect(
+                    'TRIM(CONCAT(IFNULL(evercnc.delivery_date, \'\'), \' \', IFNULL(REPLACE(evercnc.delivery_hour, \',\', \' \'), \'\'))) AS evercnc_pickup'
+                );
+            }
+            if (isset($filters['evercnc_pickup']) && $filters['evercnc_pickup'] !== '') {
+                $qb->andWhere('evercnc.delivery_date LIKE :evercnc_pickup')
+                    ->setParameter('evercnc_pickup', '%' . $filters['evercnc_pickup'] . '%');
+            }
         }
     }
 
@@ -1283,14 +1508,13 @@ class Everpsclickandcollect extends CarrierModule
                 );
             }
             $store['image'] = $imageRetriever->getImage(new Store($store['id_store']), $store['id_store']);
-            if (is_array($store['image'])) {
-                $store['image']['legend'] = $store['image']['legend'][$this->context->language->id];
+            if (is_array($store['image']) && isset($store['image']['legend']) && is_array($store['image']['legend'])) {
+                $store['image']['legend'] = isset($store['image']['legend'][$this->context->language->id])
+                    ? $store['image']['legend'][$this->context->language->id]
+                    : '';
             }
-            $store_hours = EverpsclickandcollectStore::getByIdStore(
-                (int) $store['id_store']
-            );
-            $store = (array)array_merge((array)$store, (array)$store_hours);
         }
+        unset($store);
 
         return $stores;
     }
@@ -1412,9 +1636,7 @@ class Everpsclickandcollect extends CarrierModule
         }
         // If id store exists on customer cookie, let's lower stock
         $evercnc_id_store = Context::getContext()->cookie->__get('everclickncollect_id');
-        if (isset($evercnc_id_store)
-            && !empty($evercnc_id_store)
-        ) {
+        if (empty($evercnc_id_store)) {
             $evercnc_id_store = (int)Configuration::get('EVERPSCLICKANDCOLLECT_DEFAULT_STORE');
         }
         EverpsclickandcollectStoreStock::setQuantity(
@@ -1504,7 +1726,7 @@ class Everpsclickandcollect extends CarrierModule
             $subject = $this->l('An order has been placed on your store');
             $mail_dir = _PS_MODULE_DIR_ . $this->name.'/mails/';
             Mail::send(
-                (int) Context::getContext()->language->id,
+                (int) $order->id_lang,
                 $this->name,
                 (string) $subject,
                 array(
@@ -1513,7 +1735,7 @@ class Everpsclickandcollect extends CarrierModule
                         'PS_LOGO',
                         null,
                         null,
-                        (int) $id_shop
+                        (int) $order->id_shop
                     ),
                     '{message}' => $items,
                 ),
@@ -1534,14 +1756,14 @@ class Everpsclickandcollect extends CarrierModule
         $csv_datas = array();
         foreach ($objects as $obj) {
             $csv_datas[] = array(
-                utf8_decode($obj->id_store),
-                utf8_decode($obj->id_product),
-                utf8_decode($obj->id_product_attribute),
-                utf8_decode($obj->reference),
-                utf8_decode($obj->product_name),
-                utf8_decode($obj->attribute_designation),
-                utf8_decode($obj->store_name),
-                utf8_decode($obj->qty),
+                mb_convert_encoding((string) $obj->id_store, 'ISO-8859-1', 'UTF-8'),
+                mb_convert_encoding((string) $obj->id_product, 'ISO-8859-1', 'UTF-8'),
+                mb_convert_encoding((string) $obj->id_product_attribute, 'ISO-8859-1', 'UTF-8'),
+                mb_convert_encoding((string) $obj->reference, 'ISO-8859-1', 'UTF-8'),
+                mb_convert_encoding((string) $obj->product_name, 'ISO-8859-1', 'UTF-8'),
+                mb_convert_encoding((string) $obj->attribute_designation, 'ISO-8859-1', 'UTF-8'),
+                mb_convert_encoding((string) $obj->store_name, 'ISO-8859-1', 'UTF-8'),
+                mb_convert_encoding((string) $obj->qty, 'ISO-8859-1', 'UTF-8'),
             );
         }
         // output headers so that the file is downloaded rather than displayed
@@ -1630,6 +1852,11 @@ class Everpsclickandcollect extends CarrierModule
         $tableStyle = 'style="border-collapse: collapse;width:100%;"';
         $items = '';
         $table = '<h4>'.$order->reference.'</h4>';
+        $labels = $this->getPickupLabels($this->getCartPickup((int) $order->id_cart), (int) $order->id_lang);
+        if ($labels['date']) {
+            $table .= '<p><strong>'.$this->l('Pickup').' :</strong> '
+                .Tools::safeOutput($labels['date'].' '.$labels['slots']).'</p>';
+        }
         // First global datas, as customer
         $table .= '<table '.$tableStyle.'>';
         // Global datas header
@@ -1662,7 +1889,7 @@ class Everpsclickandcollect extends CarrierModule
         $table .= $customer->firstname.' '.$customer->lastname;
         $table .= '</td>';
         $table .=  '<td '.$tdStyle.'>';
-        $table .= $address->address1.' '.$order->address2;
+        $table .= $address->address1.' '.$address->address2;
         $table .= '</td>';
         $table .=  '<td '.$tdStyle.'>';
         $table .= $address->postcode;
@@ -1674,7 +1901,7 @@ class Everpsclickandcollect extends CarrierModule
         $table .= $address->phone;
         $table .= '</td>';
         $table .= '</tr>';
-        $table .= '<table>';
+        $table .= '</table>';
         // End global datas
         // Now products
         $table .= '<h4>'.$this->l('Ordered products').'</h4>';
@@ -1705,7 +1932,7 @@ class Everpsclickandcollect extends CarrierModule
             $table .= '</td>';
             $table .= '</tr>';
         }
-        $table .= '<table>';
+        $table .= '</table>';
         // End products
         // Now others datas
         $table .= '<h4>'.$this->l('Order informations').'</h4>';
@@ -1746,7 +1973,7 @@ class Everpsclickandcollect extends CarrierModule
         $table .= Tools::displayPrice($order->total_shipping);
         $table .= '</td>';
         $table .= '</tr>';
-        $table .= '<table>';
+        $table .= '</table>';
         $table .= '<hr>';
         $table .= '<hr>';
         // End other datas
@@ -1828,33 +2055,5 @@ class Everpsclickandcollect extends CarrierModule
         }
 
         return $resultsArray;
-    }
-
-    public function checkLatestEverModuleVersion($module, $version)
-    {
-        $upgrade_link = 'https://upgrade.team-ever.com/upgrade.php?module='
-        .$module
-        .'&version='
-        .$version;
-        try {
-            $handle = curl_init($upgrade_link);
-            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
-            curl_exec($handle);
-            $httpCode = curl_getinfo($handle, CURLINFO_HTTP_CODE);
-            curl_close($handle);
-            if ($httpCode != 200) {
-                return false;
-            }
-            $module_version = Tools::file_get_contents(
-                $upgrade_link
-            );
-            if ($module_version && $module_version > $version) {
-                return true;
-            }
-            return false;
-        } catch (Exception $e) {
-            PrestaShopLogger::addLog('Unable to check Team Ever module upgrade');
-            return false;
-        }
     }
 }

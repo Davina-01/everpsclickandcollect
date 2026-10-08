@@ -45,3 +45,26 @@
 		white-space: nowrap;
 	}
 }
+/* Pickup store, date and time slots (3.2.0) */
+.evercnc { padding: 0.5rem 0 1rem; text-align: left; }
+.evercnc label, .evercnc .evercnc-label { text-align: left; }
+.evercnc-msg { margin-bottom: 0.75rem; }
+.evercnc-store { border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; background: #fff; }
+.evercnc-store--active { border-color: #24b9d7; }
+.evercnc-store__head { display: flex; align-items: flex-start; gap: 0.75rem; margin: 0; cursor: pointer; font-weight: normal; }
+.evercnc-store__head input[type=radio] { margin-top: 0.3rem; }
+.evercnc-store__img { max-width: 80px; height: auto; }
+.evercnc-booking { margin-top: 0.75rem; }
+.evercnc-label { display: block; font-weight: 600; margin: 0.5rem 0 0.35rem; }
+.evercnc-date { max-width: 320px; }
+.evercnc-slots { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.evercnc-slot { margin: 0; cursor: pointer; }
+.evercnc-slot input { position: absolute; opacity: 0; pointer-events: none; }
+.evercnc-slot > span { display: inline-block; min-width: 7.5rem; text-align: center; padding: 0.4rem 0.6rem; border: 1px solid #bbb; border-radius: 4px; background: #f8f8f8; font-size: 0.9rem; }
+.evercnc-slot input:checked + span { background: #24b9d7; border-color: #24b9d7; color: #fff; }
+.evercnc-slot input:focus-visible + span { outline: 2px solid #24b9d7; outline-offset: 2px; }
+.evercnc-slot--full { cursor: not-allowed; }
+.evercnc-slot--full > span { opacity: 0.45; }
+.evercnc-slot--full .evercnc-slot__time { text-decoration: line-through; }
+.evercnc-slot--full em { font-style: normal; }
+.evercnc-warning { margin-top: 0.75rem; }

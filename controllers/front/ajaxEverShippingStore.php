@@ -23,66 +23,55 @@ if (!defined('_PS_VERSION_')) {
 
 class EverpsclickandcollectAjaxEverShippingStoreModuleFrontController extends ModuleFrontController
 {
-    public function initContent()
-    {
-        $this->isSeven = Tools::version_compare(_PS_VERSION_, '1.7', '>=') ? true : false;
-        $this->ajax = true;
-
-        parent::initContent();
-    }
+    public $ajax = true;
 
     /**
-     * Ajax Process
+     * Saves the customer choice while they click (store, date, slots).
+     * The final check is done when they press "Continue" (hookActionValidateStepComplete).
      */
     public function displayAjaxSaveShippingStore()
     {
-        if (!Tools::getValue('everclickncollect_id')
-            || !Validate::isInt(Tools::getValue('everclickncollect_id'))
-        ) {
-            die(json_encode(array(
+        header('Content-Type: application/json');
+        $idStore = (int) Tools::getValue('everclickncollect_id');
+        $cart = $this->context->cart;
+        if (!$idStore || !$this->module->isAllowedStore($idStore)) {
+            $this->ajaxRender(json_encode(array(
                 'return' => false,
-                'error' => $this->module->l('ID store is not valid')
+                'error' => $this->module->l('ID store is not valid', 'ajaxevershippingstore')
             )));
+            return;
         }
-        if ((bool)Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE') === true
-            && Tools::getValue('everclickncollect_date')
-            && !Validate::isString(Tools::getValue('everclickncollect_date'))
-        ) {
-            die(json_encode(array(
+        if (!Validate::isLoadedObject($cart)) {
+            $this->ajaxRender(json_encode(array(
                 'return' => false,
-                'error' => $this->module->l('Date is not valid')
+                'error' => $this->module->l('Cart not found', 'ajaxevershippingstore')
             )));
-        } else {
-            $this->context->cookie->__set(
-                'everclickncollect_date',
-                Tools::getValue('everclickncollect_date')
+            return;
+        }
+        $date = null;
+        $slots = array();
+        if ((bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE')) {
+            $postedDate = (string) Tools::getValue('everclickncollect_date');
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $postedDate)) {
+                $date = $postedDate;
+                $slots = EverpsclickandcollectSlots::splitSlots((array) Tools::getValue('everclickncollect_slots', array()));
+            }
+        }
+        $this->module->savePickup((int) $cart->id, $idStore, $date, $slots);
+        $this->context->cookie->__set('everclickncollect_id', $idStore);
+        $errors = array();
+        if ((bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE') && $date && $slots) {
+            $errors = EverpsclickandcollectSlots::validateSelection(
+                $idStore,
+                (int) $this->context->language->id,
+                (int) $cart->id,
+                $date,
+                $slots
             );
         }
-        if ((bool)Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE') === true) {
-            $delivery_date = pSQL(Tools::getValue('everclickncollect_date'));
-        } else {
-            $delivery_date = null;
-        }
-        $cart = Context::getContext()->cart;
-        Db::getInstance()->insert(
-            'everpsclickandcollect',
-            array(
-                'id_cart' => (int)$cart->id,
-                'id_store' => (int)Tools::getValue('everclickncollect_id'),
-                'delivery_date' => (string)$delivery_date
-            ),
-            false,
-            true,
-            Db::REPLACE
-        );
-        Context::getContext()->cookie->__unset('everclickncollect_id');
-        $this->context->cookie->__set(
-            'everclickncollect_id',
-            Tools::getValue('everclickncollect_id')
-        );
-        die(json_encode(array(
+        $this->ajaxRender(json_encode(array(
             'return' => true,
-            'success' => $this->module->l('Store has been saved')
+            'warning' => $errors ? $this->module->getSlotErrorMessage($errors[0]) : '',
         )));
     }
 }

@@ -96,6 +96,18 @@ class EverpsclickandcollectStore extends ObjectModel
                 'validate' => 'isString',
                 'required' => false
             ),
+            'friday_open' => array(
+                'type' => self::TYPE_STRING,
+                'lang' => false,
+                'validate' => 'isString',
+                'required' => false
+            ),
+            'friday_close' => array(
+                'type' => self::TYPE_STRING,
+                'lang' => false,
+                'validate' => 'isString',
+                'required' => false
+            ),
             'saturday_open' => array(
                 'type' => self::TYPE_STRING,
                 'lang' => false,

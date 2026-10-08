@@ -18,3 +18,13 @@ You can contact us on our site https://www.team-ever.com
 This free Prestashop Click'n Collect module is available for everyone also at this URL
 https://www.team-ever.com/prestashop-module-clickn-collect-gratuit/
 ![Delivery click'n collect method](https://i0.wp.com/www.team-ever.com/wp-content/uploads/2021/04/choix-click-and-collect-prestashop.jpg?fit=897%2C884&ssl=1)
+
+## 3.2.0 (unofficial fork)
+
+This version is a fork of [TeamEver/everpsclickandcollect](https://github.com/TeamEver/everpsclickandcollect), not an official Team Ever release. Original work © Team Ever, AFL-3.0.
+
+- Pickup time slots: customers choose a pickup **date** and one or more **time slots** (30 min by default) during checkout. Slots are built from the store opening hours (Shop parameters > Contact > Stores), e.g. `09:00 - 19:00`, `9h-12h / 14h-18h30`, `09:00AM - 07:00PM`.
+- Settings: slot length, minimum preparation time, bookable days ahead, max orders per slot, max slots per order, closed dates.
+- "Continue" on the shipping step is blocked until a valid date and slot are chosen (server-side check).
+- Pickup date and time shown on order confirmation, back office order page, invoice / delivery slip PDF, emails, and as a filterable "Pickup" column in the back office order list.
+- PrestaShop 8.2 fixes: order confirmation block never displayed, stale cached carrier block, `displayAdminOrderMain`, undefined variable in store email, PHP 8.2 deprecations, uninstall failure, remote version check removed.

@@ -1,62 +1,92 @@
 /**
- * 2019-2023 Team Ever
+ * Ever PS Click And Collect - pickup store, date and time slots on checkout
  *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License (AFL 3.0)
- * that is bundled with this package in the file LICENSE.txt.
- * It is also available through the world-wide-web at this URL:
- * http://opensource.org/licenses/afl-3.0.php
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@prestashop.com so we can send you a copy immediately.
- *
- *  @author    Team Ever <https://www.team-ever.com/>
- *  @copyright 2019-2023 Team Ever
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
-$(document).ready(function() {
-	var ajax_url = $('#everclickncollect_id').data('evercncurl');
-	var everclickncollect_id = $('#everclickncollect_id').data('evercnccarrier');	
-	// On select date, check input radio to trigger ajax process
-	if ($('#everclickncollect_id .store_date' ).length) {
-		$('#everclickncollect_id .store_date' ).change(function (){
-			var current_store = $(this).data('idstore');
-			$('#everclickncollect_id #store_depot_list input[type=radio]#' + current_store).click();
-			
+(function ($) {
+	'use strict';
+
+	var root = '#everclickncollect_id';
+
+	function activeStore() {
+		var $wrap = $(root);
+		var $radio = $wrap.find('.evercnc-store-radio:checked');
+		if ($radio.length) {
+			return $wrap.find('.evercnc-store[data-idstore="' + $radio.val() + '"]');
+		}
+		return $wrap.find('.evercnc-store').first();
+	}
+
+	function save() {
+		var $wrap = $(root);
+		var $store = activeStore();
+		if (!$wrap.length || !$store.length) {
+			return;
+		}
+		var slots = [];
+		$store.find('.evercnc-slots:visible input[type=checkbox]:checked').each(function () {
+			slots.push($(this).val());
+		});
+		$.ajax({
+			type: 'POST',
+			url: $wrap.data('evercncurl'),
+			cache: false,
+			dataType: 'json',
+			data: {
+				action: 'SaveShippingStore',
+				ajax: true,
+				everclickncollect_id: $store.data('idstore'),
+				everclickncollect_date: $store.find('.evercnc-date').val() || '',
+				everclickncollect_slots: slots
+			},
+			success: function (data) {
+				var $warning = $store.find('.evercnc-warning');
+				if (data && data.warning) {
+					$warning.text(data.warning).show();
+				} else {
+					$warning.hide();
+				}
+			}
 		});
 	}
-	// TODO
-	// if (!$('#everclickncollect_id #store_depot_list input[type=radio]').length) {
-	// 	$('#delivery_option_' + everclickncollect_id).parent().parent().parent().remove();
-	// 	$('#everclickncollect_id').remove();
-	// 	var next_method = $('.delivery-options .delivery-option').first().find('custom-radio input').hide();
-	// }
-	$('#everclickncollect_id #store_depot_list input[type=radio]').click(function(e){
-		if ($('#everclickncollect_id .store_date_' + $(this).val() ).length) {
-			var selected_date = $('#everclickncollect_id .store_date_' + $(this).val() ).val();
-		} else {
-			var selected_date = '';
+
+	function showDate($store) {
+		var date = $store.find('.evercnc-date').val();
+		$store.find('.evercnc-slots').each(function () {
+			var $slots = $(this);
+			var visible = $slots.data('date') === date;
+			$slots.toggle(visible);
+			// Hidden days must not be submitted with the checkout form
+			$slots.find('input[type=checkbox]').each(function () {
+				$(this).prop('disabled', !visible || $(this).data('full') === 1);
+				if (!visible) {
+					$(this).prop('checked', false);
+				}
+			});
+		});
+	}
+
+	$(document).on('change', root + ' .evercnc-store-radio', function () {
+		$(root + ' .evercnc-store').removeClass('evercnc-store--active').find('.evercnc-booking').hide();
+		var $store = activeStore();
+		$store.addClass('evercnc-store--active').find('.evercnc-booking').show();
+		save();
+	});
+
+	$(document).on('change', root + ' .evercnc-date', function () {
+		showDate($(this).closest('.evercnc-store'));
+		save();
+	});
+
+	$(document).on('change', root + ' .evercnc-slots input[type=checkbox]', function () {
+		var $wrap = $(root);
+		var max = parseInt($wrap.data('maxselected'), 10) || 0;
+		var $store = $(this).closest('.evercnc-store');
+		if (max > 0 && $store.find('.evercnc-slots input[type=checkbox]:checked').length > max) {
+			$(this).prop('checked', false);
+			$store.find('.evercnc-warning').text($wrap.data('msg-max')).show();
+			return;
 		}
-	    $.ajax({
-	        type: 'POST',
-	        url: ajax_url,
-	        cache: false,
-	        dataType: 'JSON',
-	        data: {
-	            action: 'SaveShippingStore',
-	            ajax: true,
-	            everclickncollect_id : $(this).val(),
-	            everclickncollect_date : selected_date,
-	        },
-	        success: function(data) {
-	            if (data.return) {
-	            	// prestashop.emit('updateCart', {reason: {linkAction: 'refresh'}, resp: {}});
-	            }
-	        },
-	        error: function(jqXHR, textStatus, errorThrown) {
-	            console.log(textStatus + ' ' + errorThrown);
-	        }
-	    });		
-	})
-});
+		save();
+	});
+})(jQuery);
