@@ -42,9 +42,11 @@ This version is a fork of [TeamEver/everpsclickandcollect](https://github.com/Te
 
 Pickup time redesigned: customers are rarely sure when they will come, so instead of booking one slot they choose:
 
-- **A. Pick up now** – only offered today between the earliest and latest pickup time; message T4.
-- **B. Pick up later** – up to 3 optional periods `date HH:MM – HH:MM` (hour + minute pickers, minute step 5/10/15/20/30/60). Overlapping or touching periods of the same day are merged. Dates: today and the next business days (closed days are skipped).
+- **A. Pick up now** – only offered today during today's pickup hours; message T4.
+- **B. Pick up later** – up to 3 periods `date HH:MM – HH:MM` (hour + minute pickers, minute step 5/10/15/20/30/60). Prefilled with today from now to the end of the pickup hours; an added line takes the next pickup day, whole pickup hours. The customer can change or clear them. Overlapping or touching periods of the same day are merged.
 
-Orders choosing B are **prepared on arrival** (not in advance) when no period is given, when the first and last dates are more than N days apart, or when the merged periods last more than N hours (both rules can be switched off). Messages T1–T6 are editable per language and can be switched off; variables `{最晚取货时间}`/`{latest}`, `{关门时间}`/`{closing}`, `{立即取货时限}`/`{now_limit}`.
+**Pickup hours** are set per week day in the module (one or several ranges, e.g. `10:30-14:00, 16:00-19:00`; empty = no pickup that day), independently from the store opening hours. "No pickup on these dates" closes a whole date (`2026-12-25`) or part of it (`2026-12-24 14:00-19:00`).
 
-Back office: "A · …" / "B · …" with a "Prepare on arrival" badge on the order page and in the order list, staff can change the pickup time of an order, delivery slip shows the flag. Chinese translation added. Orders saved by 3.2.0 / 3.3.0 are still displayed.
+Orders choosing B are **prepared on arrival** (not in advance) when no period is given, when the first and last dates are more than N days apart, or when the merged periods last more than N hours (both rules can be switched off). Messages T1–T6 are editable per language (English, French) and can be switched off; variables `{latest}` (latest pickup time of the week), `{closing}`, `{now_limit}`.
+
+Back office: "A · …" / "B · …" with a "Prepare on arrival" badge on the order page and in the order list; staff can change the pickup time of an order (any date). Pickup information is no longer printed on invoices and delivery slips. Orders saved by 3.2.0 / 3.3.0 are still displayed.

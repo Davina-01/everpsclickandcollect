@@ -22,7 +22,7 @@ if (!defined('_PS_VERSION_')) {
 }
 
 /**
- * 3.4.0: "Pick up now" / "Pick up later" with up to 3 time periods,
+ * 3.4.0: "Pick up now" / "Pick up later" with up to 3 time periods, pickup hours per week day,
  * "prepare on arrival" rules, messages T1-T6, staff can change the pickup time.
  * Orders saved by older versions keep their time slots and are still displayed.
  *
@@ -52,6 +52,25 @@ function upgrade_module_3_4_0($module)
         'EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT',
         'EVERPSCLICKANDCOLLECT_SLOT_MODE',
     ) as $key) {
+        Configuration::deleteByName($key);
+    }
+
+    // Pickup information is not printed on invoices and delivery slips anymore
+    $module->unregisterHook('displayPDFInvoice');
+    $module->unregisterHook('displayPDFDeliverySlip');
+
+    // Pickup hours per week day replace "business days" + earliest / latest time
+    $schedule = array();
+    $openDays = json_decode((string) Configuration::get('EVERPSCLICKANDCOLLECT_OPEN_DAYS'), true);
+    $earliest = Configuration::get('EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST');
+    $latest = Configuration::get('EVERPSCLICKANDCOLLECT_PICKUP_LATEST');
+    if (is_array($openDays) && $earliest && $latest && Configuration::get('EVERPSCLICKANDCOLLECT_SCHEDULE') === false) {
+        for ($day = 1; $day <= 7; ++$day) {
+            $schedule[$day] = in_array($day, $openDays) ? $earliest . '-' . $latest : '';
+        }
+        Configuration::updateValue('EVERPSCLICKANDCOLLECT_SCHEDULE', json_encode($schedule));
+    }
+    foreach (array('EVERPSCLICKANDCOLLECT_OPEN_DAYS', 'EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST', 'EVERPSCLICKANDCOLLECT_PICKUP_LATEST') as $key) {
         Configuration::deleteByName($key);
     }
 

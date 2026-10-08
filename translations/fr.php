@@ -263,3 +263,15 @@ $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_4019db33abfd8
 $_MODULE['<{everpsclickandcollect}prestashop>extra_carrier_a2cc0690ecce294a95bc041c743111c6'] = 'Quand pourriez-vous venir ? (facultatif, jusqu\'à 3 plages horaires)';
 $_MODULE['<{everpsclickandcollect}prestashop>extra_carrier_56b94f4a108087c3bd781cddb8779bbf'] = 'Quand retirerez-vous votre commande ?';
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_714ff88d4b0a0e9cbc5e7e868e9a6941'] = 'Vous pouvez ajouter jusqu\'à %d plages horaires.';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_3a255dbf821d027af5594d76602f01cc'] = 'Jours de retrait réservables';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_b78239a629c2d8c7242b8bd926fd82c4'] = 'Le client peut choisir jusqu\'à ce jour de retrait, à partir d\'aujourd\'hui (les jours sans retrait ne comptent pas)';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_eb18eca5d791c1f0a9311d609213642c'] = 'Erreur : « %s » n\'est pas valide. Utilisez 2026-12-25 ou 2026-12-24 14:00-19:00';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_1f8de21f9d2d4c609d2377095b3301bd'] = 'Erreur : les horaires de retrait du %s ne sont pas valides. Utilisez par ex. 10:30-19:00 ou 10:30-14:00, 16:00-19:00 (sans chevauchement)';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_18e1ba76fa15c46cf4a58c16cb6a2002'] = 'Erreur : veuillez indiquer des horaires de retrait pour au moins un jour';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_f6926254ab40cc082543e5fe205ec34f'] = 'Erreur : l\'heure de fermeture doit être au format HH:MM, ex. 19:30';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_8b08a67228df366cfe6bd64d0f407c20'] = 'Erreur : les minutes des horaires de retrait du %s doivent être un multiple du pas (%d)';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_08389384dbcd549d4c50e6213c88f341'] = 'Pas de retrait à ces dates';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_9cd699a6147965ca748554090df28f46'] = 'Une par ligne. Journée entière : 2026-12-25. Partie de la journée : 2026-12-24 14:00-19:00';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_ec3194138cad0479814349d61f6c4414'] = 'Utilisée seulement dans le message T1 ({closing}), ex. 19:30. {latest} est l\'heure de retrait la plus tardive de la semaine';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_4df86db1e44ba668a24c62a669c2a587'] = 'Horaires de retrait : %s';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_6d741aed66b440a2960ad8ac1a05ef2a'] = 'ex. 10:30-19:00, ou 10:30-14:00, 16:00-19:00. Vide : pas de retrait ce jour-là. Indépendant des horaires d\'ouverture du magasin';

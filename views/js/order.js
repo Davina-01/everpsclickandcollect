@@ -70,8 +70,36 @@
 		return { date: String($row.find('.evercnc-p-date').val() || ''), start: start, end: end, status: status, values: v };
 	}
 
-	/* Enable only the hours / minutes between min and max */
-	function limitOptions($hour, $minute, min, max) {
+	function dayInfo(s, date) {
+		return (s.days && s.days[date]) || { ranges: [], start: null, end: null };
+	}
+
+	function validStart(t, ranges, step, min) {
+		if (t % step !== 0 || t < min) {
+			return false;
+		}
+		for (var i = 0; i < ranges.length; i++) {
+			if (t >= ranges[i][0] && t + step <= ranges[i][1]) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	function validEnd(t, ranges, step, start) {
+		if (start !== null && t <= start) {
+			return false;
+		}
+		for (var i = 0; i < ranges.length; i++) {
+			if (t > ranges[i][0] && t <= ranges[i][1] && (t % step === 0 || t === ranges[i][1])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/* Enable only the hours / minutes accepted by isValid(minutes) */
+	function limitOptions($hour, $minute, isValid) {
 		$hour.find('option').each(function () {
 			if (this.value === '') {
 				return;
@@ -79,11 +107,8 @@
 			var h = parseInt(this.value, 10);
 			var ok = false;
 			$minute.find('option').each(function () {
-				if (this.value !== '') {
-					var t = h * 60 + parseInt(this.value, 10);
-					if (t >= min && t <= max) {
-						ok = true;
-					}
+				if (this.value !== '' && isValid(h * 60 + parseInt(this.value, 10))) {
+					ok = true;
 				}
 			});
 			this.disabled = !ok;
@@ -96,12 +121,7 @@
 			if (this.value === '') {
 				return;
 			}
-			if (hour === '' || hour === null) {
-				this.disabled = false;
-				return;
-			}
-			var t = parseInt(hour, 10) * 60 + parseInt(this.value, 10);
-			this.disabled = t < min || t > max;
+			this.disabled = hour !== '' && hour !== null && !isValid(parseInt(hour, 10) * 60 + parseInt(this.value, 10));
 		});
 		if ($minute.val() !== '' && $minute.find('option:selected').prop('disabled')) {
 			$minute.val('');
@@ -117,15 +137,49 @@
 		}
 	}
 
+	function minStartOf(s, date) {
+		return date === s.today ? Math.ceil(nowMinutes(s) / s.step) * s.step : 0;
+	}
+
 	function updateRowOptions($row, s) {
 		var date = String($row.find('.evercnc-p-date').val() || '');
-		var minStart = s.earliest;
-		if (date === s.today) {
-			minStart = Math.max(minStart, nowMinutes(s));
-		}
-		limitOptions(part($row, 'sh'), part($row, 'sm'), minStart, s.latest - s.step);
+		var info = dayInfo(s, date);
+		var min = minStartOf(s, date);
+		limitOptions(part($row, 'sh'), part($row, 'sm'), function (t) {
+			return validStart(t, info.ranges, s.step, min);
+		});
 		var start = minutesOf(part($row, 'sh').val() || '', part($row, 'sm').val() || '');
-		limitOptions(part($row, 'eh'), part($row, 'em'), (start === null ? minStart : start) + s.step, s.latest);
+		limitOptions(part($row, 'eh'), part($row, 'em'), function (t) {
+			return validEnd(t, info.ranges, s.step, start);
+		});
+	}
+
+	function setTimes($row, start, end) {
+		var pad = function (n) {
+			return (n < 10 ? '0' : '') + n;
+		};
+		part($row, 'sh').val(start === null ? '' : String(Math.floor(start / 60)));
+		part($row, 'sm').val(start === null ? '' : pad(start % 60));
+		part($row, 'eh').val(end === null ? '' : String(Math.floor(end / 60)));
+		part($row, 'em').val(end === null ? '' : pad(end % 60));
+	}
+
+	/* Default times of a date: from now (today) or the first pickup time, to the end of the day's pickup hours */
+	function applyDefaults($row, s) {
+		var date = String($row.find('.evercnc-p-date').val() || '');
+		var info = dayInfo(s, date);
+		var start = info.start;
+		if (date === s.today) {
+			var min = minStartOf(s, date);
+			start = null;
+			for (var i = 0; i < info.ranges.length && start === null; i++) {
+				var t = Math.max(info.ranges[i][0], min);
+				if (t + s.step <= info.ranges[i][1]) {
+					start = t;
+				}
+			}
+		}
+		setTimes($row, start, start === null ? null : info.end);
 	}
 
 	function merge(periods) {
@@ -238,8 +292,24 @@
 		save();
 	});
 
-	$(document).on('change', root + ' input[name="evercnc_mode"], ' + root + ' .evercnc-period select', function () {
+	$(document).on('change', root + ' input[name="evercnc_mode"], ' + root + ' .evercnc-period select[data-part]', function () {
 		evaluate($(this).closest('.evercnc-booking'));
+		save();
+	});
+
+	/* New date: keep the times when they are still possible that day, else take the day's default times */
+	$(document).on('change', root + ' .evercnc-p-date', function () {
+		var $booking = $(this).closest('.evercnc-booking');
+		var s = settings($booking);
+		var $row = $(this).closest('.evercnc-period');
+		var d = rowData($row);
+		if (d.status === 'complete') {
+			var info = dayInfo(s, d.date);
+			if (!validStart(d.start, info.ranges, s.step, minStartOf(s, d.date)) || !validEnd(d.end, info.ranges, s.step, d.start)) {
+				applyDefaults($row, s);
+			}
+		}
+		evaluate($booking);
 		save();
 	});
 
@@ -251,9 +321,22 @@
 			return;
 		}
 		$row.prop('hidden', false).find('select').prop('disabled', false);
-		$row.find('select[data-part]').val('');
-		$row.find('.evercnc-p-date').prop('selectedIndex', 0);
+		// Default: the day after the last chosen day, whole pickup hours of that day
+		var last = '';
+		$booking.find('.evercnc-period:not([hidden])').not($row).each(function () {
+			var date = String($(this).find('.evercnc-p-date').val() || '');
+			if (date > last) {
+				last = date;
+			}
+		});
+		var $options = $row.find('.evercnc-p-date option');
+		var $next = $options.filter(function () {
+			return this.value > last;
+		}).first();
+		$row.find('.evercnc-p-date').val(($next.length ? $next : $options.last()).val());
+		applyDefaults($row, settings($booking));
 		evaluate($booking);
+		save();
 		$row.find('.evercnc-p-date').trigger('focus');
 	});
 

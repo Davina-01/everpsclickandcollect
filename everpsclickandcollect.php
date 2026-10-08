@@ -72,8 +72,6 @@ class Everpsclickandcollect extends CarrierModule
             $this->registerHook('displayBackOfficeHeader') &&
             $this->registerHook('displayCarrierExtraContent') &&
             $this->registerHook('displayOrderConfirmation') &&
-            $this->registerHook('displayPDFDeliverySlip') &&
-            $this->registerHook('displayPDFInvoice') &&
             $this->registerHook('displayAdminOrderMain') &&
             $this->registerHook('actionValidateStepComplete') &&
             $this->registerHook('actionOrderGridDefinitionModifier') &&
@@ -101,6 +99,9 @@ class Everpsclickandcollect extends CarrierModule
                 Configuration::updateValue($key, $value);
             }
         }
+        if (Configuration::get('EVERPSCLICKANDCOLLECT_SCHEDULE') === false) {
+            Configuration::updateValue('EVERPSCLICKANDCOLLECT_SCHEDULE', json_encode(EverpsclickandcollectPickup::$defaultSchedule));
+        }
         $defaults = $this->getDefaultTexts();
         foreach ($defaults as $code => $byIso) {
             $key = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
@@ -108,7 +109,6 @@ class Everpsclickandcollect extends CarrierModule
             foreach (Language::getLanguages(false) as $lang) {
                 $current = Configuration::get($key, (int) $lang['id_lang']);
                 $iso = Tools::strtolower($lang['iso_code']);
-                $iso = in_array($iso, array('zh', 'tw', 'hk')) ? 'zh' : $iso;
                 // Keep texts edited by the merchant. A language added later gets a copy of the
                 // default language text: replace it when it is still an untouched default.
                 $untouchedOther = $current === $byIso['en'] && $iso !== 'en' && isset($byIso[$iso]);
@@ -147,38 +147,32 @@ class Everpsclickandcollect extends CarrierModule
 
     /**
      * Default customer messages T1-T6.
-     * Variables: {最晚取货时间} / {latest}, {关门时间} / {closing}, {立即取货时限} / {now_limit}
+     * Variables: {latest} (latest pickup time of the week), {closing}, {now_limit}
      */
     public function getDefaultTexts()
     {
         return array(
             'T1' => array(
-                'zh' => '如需在 {最晚取货时间}–{关门时间} 取货，请选择 {最晚取货时间}，并提前通过 WhatsApp 联系我们，我们会留一名同事在店里等您。',
                 'fr' => 'Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l\'avance par WhatsApp : un collègue restera au magasin pour vous attendre.',
                 'en' => 'To pick up between {latest} and {closing}, choose {latest} and let us know in advance on WhatsApp: a colleague will stay in the shop for you.',
             ),
             'T2' => array(
-                'zh' => '如需更改取货时间，请通过 WhatsApp 联系我们。我们经常无法接听电话，请勿来电。',
                 'fr' => 'Pour modifier l\'heure de retrait, contactez-nous par WhatsApp. Nous ne pouvons souvent pas répondre au téléphone, merci de ne pas appeler.',
                 'en' => 'To change your pickup time, please contact us on WhatsApp. We often cannot answer the phone, please do not call.',
             ),
             'T3' => array(
-                'zh' => '门店繁忙时，可能需要到店后现场备货，请您谅解稍候。',
                 'fr' => 'Quand le magasin est très fréquenté, votre commande pourra être préparée à votre arrivée. Merci de votre patience.',
                 'en' => 'When the shop is busy, your order may be prepared when you arrive. Thank you for your patience.',
             ),
             'T4' => array(
-                'zh' => '请在 {立即取货时限} 分钟内到店取货。如果您不是马上来取，我们之后将不会为您提前备货。',
                 'fr' => 'Merci de venir dans les {now_limit} minutes. Si vous ne venez pas tout de suite, nous ne préparerons plus votre commande à l\'avance.',
                 'en' => 'Please come within {now_limit} minutes. If you do not come right away, we will no longer prepare your order in advance.',
             ),
             'T5' => array(
-                'zh' => '您未选择具体到店时间，我们可能不会提前备货，请您理解。',
                 'fr' => 'Vous n\'avez pas indiqué d\'heure d\'arrivée : nous ne préparerons peut-être pas votre commande à l\'avance. Merci de votre compréhension.',
                 'en' => 'You have not chosen an arrival time: we may not prepare your order in advance. Thank you for your understanding.',
             ),
             'T6' => array(
-                'zh' => '您选择的时间范围较大，我们可能不会提前备货，请您理解。',
                 'fr' => 'La plage horaire choisie est large : nous ne préparerons peut-être pas votre commande à l\'avance. Merci de votre compréhension.',
                 'en' => 'The time range you chose is wide: we may not prepare your order in advance. Thank you for your understanding.',
             ),
@@ -205,7 +199,13 @@ class Everpsclickandcollect extends CarrierModule
                 'EVERPSCLICKANDCOLLECT_CLOSED_DATES',
                 'EVERPSCLICKANDCOLLECT_SLOT_MODE',
             ),
-            array_keys(EverpsclickandcollectPickup::$defaults)
+            array_keys(EverpsclickandcollectPickup::$defaults),
+            array(
+                'EVERPSCLICKANDCOLLECT_SCHEDULE',
+                'EVERPSCLICKANDCOLLECT_OPEN_DAYS',
+                'EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST',
+                'EVERPSCLICKANDCOLLECT_PICKUP_LATEST',
+            )
         );
         foreach (array_keys($this->getDefaultTexts()) as $code) {
             $keys[] = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
@@ -736,40 +736,32 @@ class Everpsclickandcollect extends CarrierModule
         foreach (EverpsclickandcollectPickup::$steps as $step) {
             $steps[] = array('id' => $step, 'name' => $step . ' min');
         }
-        $variables = $this->l('Variables:') . ' {最晚取货时间} / {latest}, {关门时间} / {closing}, {立即取货时限} / {now_limit}';
-        $inputs = array(
-            array(
-                'type' => 'checkbox',
-                'label' => $this->l('Business days'),
-                'name' => 'EVERPSCLICKANDCOLLECT_OPEN_DAYS',
-                'values' => array('query' => $days, 'id' => 'id', 'name' => 'name'),
-            ),
+        $variables = $this->l('Variables:') . ' {latest}, {closing}, {now_limit}';
+        $inputs = array();
+        foreach ($this->getDayNames() as $i => $name) {
+            $inputs[] = array(
+                'type' => 'text',
+                'label' => sprintf($this->l('Pickup hours: %s'), $name),
+                'desc' => $i === 0
+                    ? $this->l('e.g. 10:30-19:00, or 10:30-14:00, 16:00-19:00. Leave empty: no pickup that day. Independent from the store opening hours')
+                    : '',
+                'name' => 'EVERPSCLICKANDCOLLECT_SCHEDULE_' . ($i + 1),
+                'class' => 'fixed-width-xxl',
+            );
+        }
+        $inputs = array_merge($inputs, array(
             array(
                 'type' => 'textarea',
-                'label' => $this->l('Closed dates (holidays)'),
-                'desc' => $this->l('One date per line, format YYYY-MM-DD, e.g. 2026-12-25'),
+                'label' => $this->l('No pickup on these dates'),
+                'desc' => $this->l('One per line. Whole day: 2026-12-25. Part of the day: 2026-12-24 14:00-19:00'),
                 'name' => 'EVERPSCLICKANDCOLLECT_CLOSED_DATES',
                 'autoload_rte' => false,
                 'rows' => 4,
             ),
             array(
                 'type' => 'text',
-                'label' => $this->l('Earliest pickup time'),
-                'desc' => $this->l('Format HH:MM, e.g. 10:30'),
-                'name' => 'EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST',
-                'class' => 'fixed-width-sm',
-            ),
-            array(
-                'type' => 'text',
-                'label' => $this->l('Latest pickup time'),
-                'desc' => $this->l('Customers cannot choose a later time, e.g. 19:00'),
-                'name' => 'EVERPSCLICKANDCOLLECT_PICKUP_LATEST',
-                'class' => 'fixed-width-sm',
-            ),
-            array(
-                'type' => 'text',
                 'label' => $this->l('Closing time'),
-                'desc' => $this->l('Only used in message T1, e.g. 19:30'),
+                'desc' => $this->l('Only used in message T1 ({closing}), e.g. 19:30. {latest} is the latest pickup time of the week'),
                 'name' => 'EVERPSCLICKANDCOLLECT_PICKUP_CLOSING',
                 'class' => 'fixed-width-sm',
             ),
@@ -789,8 +781,8 @@ class Everpsclickandcollect extends CarrierModule
             ),
             array(
                 'type' => 'text',
-                'label' => $this->l('Bookable business days'),
-                'desc' => $this->l('Customers can choose up to this business day, counting from today (closed days are not counted)'),
+                'label' => $this->l('Bookable pickup days'),
+                'desc' => $this->l('Customers can choose up to this pickup day, counting from today (days without pickup are not counted)'),
                 'name' => 'EVERPSCLICKANDCOLLECT_BOOKABLE_DAYS',
                 'class' => 'fixed-width-sm',
             ),
@@ -823,7 +815,7 @@ class Everpsclickandcollect extends CarrierModule
                 'class' => 'fixed-width-sm',
                 'suffix' => 'h',
             ),
-        );
+        ));
         foreach ($this->getTextDescriptions() as $code => $when) {
             $inputs[] = array(
                 'type' => 'switch',
@@ -869,18 +861,13 @@ class Everpsclickandcollect extends CarrierModule
     {
         $values = array();
         foreach (array_keys(EverpsclickandcollectPickup::$defaults) as $key) {
-            if ($key === 'EVERPSCLICKANDCOLLECT_OPEN_DAYS') {
-                continue;
-            }
             $stored = Configuration::get($key);
             $values[$key] = Tools::getValue($key, $stored === false ? EverpsclickandcollectPickup::$defaults[$key] : $stored);
         }
         $settings = EverpsclickandcollectPickup::getSettings();
         for ($day = 1; $day <= 7; ++$day) {
-            $field = 'EVERPSCLICKANDCOLLECT_OPEN_DAYS_' . $day;
-            $values[$field] = Tools::isSubmit('submitEverpsclickandcollectModule')
-                ? (bool) Tools::getValue($field)
-                : in_array($day, $settings['open_days']);
+            $field = 'EVERPSCLICKANDCOLLECT_SCHEDULE_' . $day;
+            $values[$field] = Tools::getValue($field, EverpsclickandcollectPickup::formatRanges($settings['schedule'][$day]));
         }
         $values['EVERPSCLICKANDCOLLECT_CLOSED_DATES'] = Tools::getValue(
             'EVERPSCLICKANDCOLLECT_CLOSED_DATES',
@@ -908,41 +895,43 @@ class Everpsclickandcollect extends CarrierModule
             $this->postErrors[] = $this->l('Error : the minute step is not valid');
             $step = 15;
         }
-        $times = array();
-        foreach (array(
-            'EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST' => $this->l('Earliest pickup time'),
-            'EVERPSCLICKANDCOLLECT_PICKUP_LATEST' => $this->l('Latest pickup time'),
-            'EVERPSCLICKANDCOLLECT_PICKUP_CLOSING' => $this->l('Closing time'),
-        ) as $key => $label) {
-            $times[$key] = $P::toMinutes((string) Tools::getValue($key));
-            if ($times[$key] === null) {
-                $this->postErrors[] = sprintf($this->l('Error : "%s" must use the HH:MM format, e.g. 10:30'), $label);
-            }
-        }
-        $earliest = $times['EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST'];
-        $latest = $times['EVERPSCLICKANDCOLLECT_PICKUP_LATEST'];
-        $closing = $times['EVERPSCLICKANDCOLLECT_PICKUP_CLOSING'];
-        if ($earliest !== null && $latest !== null && $latest <= $earliest) {
-            $this->postErrors[] = $this->l('Error : the latest pickup time must be later than the earliest pickup time');
-        }
-        if ($latest !== null && $closing !== null && $closing < $latest) {
-            $this->postErrors[] = $this->l('Error : the closing time cannot be earlier than the latest pickup time');
-        }
-        foreach (array($earliest, $latest) as $t) {
-            if ($t !== null && ($t % 60) % $step !== 0) {
-                $this->postErrors[] = sprintf(
-                    $this->l('Error : the minutes of the earliest and latest pickup times must be a multiple of the minute step (%d)'),
-                    $step
-                );
-                break;
-            }
-        }
-        $openDays = 0;
+        $dayNames = $this->getDayNames();
+        $latest = null;
+        $longestDay = 0;
+        $pickupDays = 0;
         for ($day = 1; $day <= 7; ++$day) {
-            $openDays += Tools::getValue('EVERPSCLICKANDCOLLECT_OPEN_DAYS_' . $day) ? 1 : 0;
+            $ranges = $P::parseRanges((string) Tools::getValue('EVERPSCLICKANDCOLLECT_SCHEDULE_' . $day));
+            if ($ranges === null) {
+                $this->postErrors[] = sprintf(
+                    $this->l('Error : pickup hours of %s are not valid. Use e.g. 10:30-19:00 or 10:30-14:00, 16:00-19:00 (no overlap)'),
+                    $dayNames[$day - 1]
+                );
+                continue;
+            }
+            $total = 0;
+            foreach ($ranges as $r) {
+                if (($r[0] % 60) % $step !== 0 || ($r[1] % 60) % $step !== 0) {
+                    $this->postErrors[] = sprintf(
+                        $this->l('Error : the minutes of the pickup hours of %s must be a multiple of the minute step (%d)'),
+                        $dayNames[$day - 1],
+                        $step
+                    );
+                    break;
+                }
+                $total += $r[1] - $r[0];
+                $latest = max((int) $latest, $r[1]);
+            }
+            $pickupDays += $ranges ? 1 : 0;
+            $longestDay = max($longestDay, $total);
         }
-        if (!$openDays) {
-            $this->postErrors[] = $this->l('Error : please choose at least one business day');
+        if (!$pickupDays) {
+            $this->postErrors[] = $this->l('Error : please set pickup hours for at least one day');
+        }
+        $closing = $P::toMinutes((string) Tools::getValue('EVERPSCLICKANDCOLLECT_PICKUP_CLOSING'));
+        if ($closing === null) {
+            $this->postErrors[] = $this->l('Error : the closing time must use the HH:MM format, e.g. 19:30');
+        } elseif ($latest !== null && $closing < $latest) {
+            $this->postErrors[] = $this->l('Error : the closing time cannot be earlier than the latest pickup time');
         }
         $limit = Tools::getValue('EVERPSCLICKANDCOLLECT_NOW_LIMIT');
         if (!Validate::isUnsignedInt($limit) || (int) $limit < 1) {
@@ -958,17 +947,18 @@ class Everpsclickandcollect extends CarrierModule
         $duration = str_replace(',', '.', (string) Tools::getValue('EVERPSCLICKANDCOLLECT_MAX_DURATION'));
         if (!is_numeric($duration) || (float) $duration <= 0 || fmod((float) $duration * 2, 1) != 0) {
             $this->postErrors[] = $this->l('Error : the maximum total time must be a multiple of 0.5 hour, e.g. 6 or 4.5');
-        } elseif ($earliest !== null && $latest !== null
+        } elseif ($longestDay
             && Tools::getValue('EVERPSCLICKANDCOLLECT_DURATION_ON')
-            && (float) $duration * 60 > $latest - $earliest
+            && (float) $duration * 60 > $longestDay
         ) {
             $this->postWarnings[] = $this->l('The maximum total time is longer than one day of pickup times: this condition will not take effect unless several days are chosen.');
         }
-        foreach (preg_split('/[\s,;]+/', (string) Tools::getValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES')) as $line) {
-            $line = trim($line);
-            if ($line !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $line)) {
-                $this->postErrors[] = sprintf($this->l('Error : closed date "%s" must use the YYYY-MM-DD format'), $line);
-            }
+        $badLine = null;
+        if ($P::parseExceptions((string) Tools::getValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES'), $badLine) === null) {
+            $this->postErrors[] = sprintf(
+                $this->l('Error : "%s" is not valid. Use 2026-12-25 or 2026-12-24 14:00-19:00'),
+                $badLine
+            );
         }
         foreach (array_keys($this->getDefaultTexts()) as $code) {
             foreach (Language::getLanguages(false) as $lang) {
@@ -982,18 +972,16 @@ class Everpsclickandcollect extends CarrierModule
 
     protected function savePickupSettings()
     {
-        $openDays = array();
+        $schedule = array();
         for ($day = 1; $day <= 7; ++$day) {
-            if (Tools::getValue('EVERPSCLICKANDCOLLECT_OPEN_DAYS_' . $day)) {
-                $openDays[] = $day;
-            }
+            $schedule[$day] = EverpsclickandcollectPickup::formatRanges(
+                (array) EverpsclickandcollectPickup::parseRanges((string) Tools::getValue('EVERPSCLICKANDCOLLECT_SCHEDULE_' . $day))
+            );
         }
-        Configuration::updateValue('EVERPSCLICKANDCOLLECT_OPEN_DAYS', json_encode($openDays));
-        foreach (array('EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST', 'EVERPSCLICKANDCOLLECT_PICKUP_LATEST', 'EVERPSCLICKANDCOLLECT_PICKUP_CLOSING') as $key) {
-            Configuration::updateValue($key, EverpsclickandcollectPickup::toTime(
-                EverpsclickandcollectPickup::toMinutes((string) Tools::getValue($key))
-            ));
-        }
+        Configuration::updateValue('EVERPSCLICKANDCOLLECT_SCHEDULE', json_encode($schedule));
+        Configuration::updateValue('EVERPSCLICKANDCOLLECT_PICKUP_CLOSING', EverpsclickandcollectPickup::toTime(
+            EverpsclickandcollectPickup::toMinutes((string) Tools::getValue('EVERPSCLICKANDCOLLECT_PICKUP_CLOSING'))
+        ));
         foreach (array(
             'EVERPSCLICKANDCOLLECT_MINUTE_STEP',
             'EVERPSCLICKANDCOLLECT_NOW_LIMIT',
@@ -1008,13 +996,13 @@ class Everpsclickandcollect extends CarrierModule
             'EVERPSCLICKANDCOLLECT_MAX_DURATION',
             (string) (float) str_replace(',', '.', (string) Tools::getValue('EVERPSCLICKANDCOLLECT_MAX_DURATION'))
         );
-        $posted = array();
-        foreach (preg_split('/[\s,;]+/', (string) Tools::getValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES')) as $line) {
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($line))) {
-                $posted[] = trim($line);
+        $lines = array();
+        foreach (preg_split('/\r\n|\r|\n/', (string) Tools::getValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES')) as $line) {
+            if (trim($line) !== '') {
+                $lines[] = preg_replace('/\s+/', ' ', trim($line));
             }
         }
-        Configuration::updateValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES', implode("\n", array_unique($posted)));
+        Configuration::updateValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES', implode("\n", array_unique($lines)));
         foreach (array_keys($this->getDefaultTexts()) as $code) {
             $key = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
             Configuration::updateValue($key . '_ON', (int) Tools::getValue($key . '_ON'));
@@ -1257,36 +1245,54 @@ class Everpsclickandcollect extends CarrierModule
         $settings = $P::getSettings();
         $now = time();
         $dates = array();
+        $days = array();
+        $minHour = 23;
+        $maxHour = 0;
         foreach ($P::getBookableDates($settings, $now) as $date) {
+            $ranges = $P::getDayRanges($date, $settings);
+            $default = $P::defaultPeriod($date, $settings, $now);
             $dates[] = array('value' => $date, 'label' => $this->formatPickupDate($date, $idLang));
+            $days[$date] = array('ranges' => $ranges, 'start' => $default['start'], 'end' => $default['end']);
+            $minHour = min($minHour, intdiv($ranges[0][0], 60));
+            $maxHour = max($maxHour, intdiv($ranges[count($ranges) - 1][1], 60));
         }
-        $hours = range(intdiv($settings['earliest'], 60), intdiv($settings['latest'], 60));
+        $hours = $dates ? range($minHour, $maxHour) : array();
         $minutes = range(0, 59, $settings['step']);
         $nowAvailable = $P::isNowAvailable($settings, $now);
+        $toRow = function ($date, $start, $end) {
+            return array(
+                'date' => $date,
+                'sh' => $start === null ? '' : (string) intdiv($start, 60),
+                'sm' => $start === null ? '' : sprintf('%02d', $start % 60),
+                'eh' => $end === null ? '' : (string) intdiv($end, 60),
+                'em' => $end === null ? '' : sprintf('%02d', $end % 60),
+            );
+        };
 
         // Restore what the customer already chose for this cart
         $mode = '';
         $periods = array();
-        if ($current && in_array($current['pickup_mode'], array($P::MODE_NOW, $P::MODE_LATER))) {
+        $chosen = $current && in_array($current['pickup_mode'], array($P::MODE_NOW, $P::MODE_LATER));
+        if ($chosen) {
             $mode = $current['pickup_mode'];
             if ($mode === $P::MODE_NOW && !$nowAvailable) {
                 $mode = '';
             }
-            $dateValues = array_column($dates, 'value');
             foreach ($P::decodePeriods($current['pickup_periods']) as $p) {
-                if (in_array($p['date'], $dateValues)) {
-                    $periods[] = array(
-                        'date' => $p['date'],
-                        'sh' => (string) intdiv($p['start'], 60),
-                        'sm' => sprintf('%02d', $p['start'] % 60),
-                        'eh' => (string) intdiv($p['end'], 60),
-                        'em' => sprintf('%02d', $p['end'] % 60),
-                    );
+                if (isset($days[$p['date']])) {
+                    $periods[] = $toRow($p['date'], $p['start'], $p['end']);
                 }
             }
         }
         if (!$periods) {
-            $periods[] = array('date' => $dates ? $dates[0]['value'] : '', 'sh' => '', 'sm' => '', 'eh' => '', 'em' => '');
+            if (!$chosen && $dates) {
+                // Not chosen yet: today (or the first pickup day) from now to the end of the pickup hours
+                $first = $dates[0]['value'];
+                $periods[] = $toRow($first, $days[$first]['start'], $days[$first]['end']);
+            } else {
+                // The customer cleared the times: keep one empty line
+                $periods[] = $toRow($dates ? $dates[0]['value'] : '', null, null);
+            }
         }
 
         return array(
@@ -1301,10 +1307,9 @@ class Everpsclickandcollect extends CarrierModule
             'pickup_texts' => $this->getPickupTexts($idLang),
             'pickup_js' => json_encode(array(
                 'today' => date('Y-m-d', $now),
-                'nowMinutes' => (int) date('G', $now) * 60 + (int) date('i', $now),
-                'earliest' => $settings['earliest'],
-                'latest' => $settings['latest'],
+                'nowMinutes' => $P::nowMinutes($now),
                 'step' => $settings['step'],
+                'days' => (object) $days,
                 'maxPeriods' => $P::MAX_PERIODS,
                 'spanOn' => $settings['span_on'],
                 'maxSpan' => $settings['max_span'],
@@ -1323,11 +1328,8 @@ class Everpsclickandcollect extends CarrierModule
         $latest = EverpsclickandcollectPickup::toTime($settings['latest']);
         $closing = EverpsclickandcollectPickup::toTime($settings['closing']);
         $vars = array(
-            '{最晚取货时间}' => $latest,
             '{latest}' => $latest,
-            '{关门时间}' => $closing,
             '{closing}' => $closing,
-            '{立即取货时限}' => (string) $settings['now_limit'],
             '{now_limit}' => (string) $settings['now_limit'],
         );
         $texts = array();
@@ -1340,7 +1342,7 @@ class Everpsclickandcollect extends CarrierModule
     }
 
     /**
-     * "10月9日 周五" (zh), "ven. 9 oct." (fr), "Fri 9 Oct" (en)
+     * "ven. 9 oct." (fr), "Fri 9 Oct" (en)
      */
     public function formatPickupDate($date, $idLang = null)
     {
@@ -1349,7 +1351,7 @@ class Everpsclickandcollect extends CarrierModule
         $iso = Validate::isLoadedObject($language) ? Tools::strtolower($language->iso_code) : 'en';
         $locale = (Validate::isLoadedObject($language) && !empty($language->locale)) ? $language->locale : $iso;
         if (class_exists('IntlDateFormatter')) {
-            $pattern = in_array($iso, array('zh', 'tw', 'hk')) ? 'M月d日 EEE' : 'EEE d MMM';
+            $pattern = 'EEE d MMM';
             $formatter = new IntlDateFormatter(
                 str_replace('-', '_', $locale),
                 IntlDateFormatter::NONE,
@@ -1546,7 +1548,7 @@ class Everpsclickandcollect extends CarrierModule
     }
 
     /**
-     * Pickup information for confirmation page, back office, PDF and emails.
+     * Pickup information for confirmation page, back office and emails.
      *
      * @param array|false $row everpsclickandcollect row
      * @param int|null $idLang
@@ -1609,7 +1611,7 @@ class Everpsclickandcollect extends CarrierModule
     }
 
     /**
-     * Human readable pickup dates and slots for templates, PDF and emails
+     * Human readable pickup dates and slots of orders saved by 3.2.0 / 3.3.0
      *
      * @return array ['lines' => [['date' => 'Friday 09/10/2026', 'slots' => '10:00 - 11:00']], 'text' => '...']
      */
@@ -1908,7 +1910,7 @@ class Everpsclickandcollect extends CarrierModule
         if (!$store) {
             return;
         }
-        // Same language as the page or PDF being generated (PrestaShop builds back office PDFs in the employee language)
+        // Language of the page being displayed
         $info = $this->getPickupInfo($clickncollect, (int) $this->context->language->id, $order->date_add);
         $this->context->smarty->assign(array(
             'store' => $store,
@@ -1944,8 +1946,15 @@ class Everpsclickandcollect extends CarrierModule
         $P = 'EverpsclickandcollectPickup';
         $row = $this->getCartPickup((int) $order->id_cart);
         $settings = $P::getSettings();
+        $first = 24 * 60;
+        foreach ($settings['schedule'] as $ranges) {
+            foreach ($ranges as $r) {
+                $first = min($first, $r[0]);
+            }
+        }
+        $first = $first === 24 * 60 ? 0 : $first;
         $times = array();
-        for ($t = $settings['earliest']; $t <= $settings['latest']; $t += $settings['step']) {
+        for ($t = $first; $t <= max($settings['latest'], $first); $t += $settings['step']) {
             $times[] = $P::toTime($t);
         }
         $periods = array();
@@ -1977,17 +1986,6 @@ class Everpsclickandcollect extends CarrierModule
     {
         // Kept for shops where the module was installed before 3.2.0
         return $this->hookDisplayAdminOrderMain($params);
-    }
-
-    public function hookDisplayPDFDeliverySlip($params)
-    {
-        // Delivery slips are used by the staff: also show "prepare on arrival"
-        return $this->renderPickupInfo(new Order((int) $params['object']->id_order), 'invoice.tpl', true);
-    }
-
-    public function hookDisplayPDFInvoice($params)
-    {
-        return $this->renderPickupInfo(new Order((int) $params['object']->id_order), 'invoice.tpl');
     }
 
     /**

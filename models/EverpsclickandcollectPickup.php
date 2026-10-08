@@ -4,7 +4,10 @@
  *
  * The customer chooses:
  *   A. "now"   - pick up right away (within NOW_LIMIT minutes after ordering)
- *   B. "later" - optionally up to 3 periods "date HH:MM - HH:MM" when they may come
+ *   B. "later" - up to 3 periods "date HH:MM - HH:MM" when they may come (prefilled, can be cleared)
+ *
+ * Pickup hours are set per week day (one or several ranges, empty = no pickup that day),
+ * independently from the store opening hours. Exceptions can close a whole date or part of it.
  *
  * Orders are prepared in advance unless (B only):
  *   1. no period was given,
@@ -31,10 +34,18 @@ class EverpsclickandcollectPickup
     /** Allowed minute steps */
     public static $steps = array(5, 10, 15, 20, 30, 60);
 
+    /** Pickup hours per week day, 1 = Monday ... 7 = Sunday */
+    public static $defaultSchedule = array(
+        1 => '10:30-19:00',
+        2 => '10:30-19:00',
+        3 => '10:30-19:00',
+        4 => '10:30-19:00',
+        5 => '10:30-19:00',
+        6 => '10:30-19:00',
+        7 => '',
+    );
+
     public static $defaults = array(
-        'EVERPSCLICKANDCOLLECT_OPEN_DAYS' => '[1,2,3,4,5,6]',
-        'EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST' => '10:30',
-        'EVERPSCLICKANDCOLLECT_PICKUP_LATEST' => '19:00',
         'EVERPSCLICKANDCOLLECT_PICKUP_CLOSING' => '19:30',
         'EVERPSCLICKANDCOLLECT_MINUTE_STEP' => 15,
         'EVERPSCLICKANDCOLLECT_NOW_LIMIT' => 30,
@@ -50,7 +61,7 @@ class EverpsclickandcollectPickup
      */
     public static function toMinutes($time)
     {
-        if (!is_string($time) || !preg_match('/^(\d{1,2}):(\d{2})$/', trim($time), $m)) {
+        if (!is_string($time) || !preg_match('/^(\d{1,2})[:hH.](\d{2})$/', trim($time), $m)) {
             return null;
         }
         $h = (int) $m[1];
@@ -67,6 +78,93 @@ class EverpsclickandcollectPickup
         return sprintf('%02d:%02d', intdiv((int) $minutes, 60), (int) $minutes % 60);
     }
 
+    /**
+     * "10:30-14:00, 16:00-19:00" => [[630, 840], [960, 1140]]
+     *
+     * @return array|null null when the text is not valid
+     */
+    public static function parseRanges($text)
+    {
+        $text = trim((string) $text);
+        if ($text === '') {
+            return array();
+        }
+        $ranges = array();
+        foreach (preg_split('/\s*[,;\/]\s*/', $text) as $part) {
+            if ($part === '') {
+                continue;
+            }
+            if (!preg_match('/^(\d{1,2}[:hH.]\d{2})\s*[-–]\s*(\d{1,2}[:hH.]\d{2})$/u', $part, $m)) {
+                return null;
+            }
+            $start = self::toMinutes($m[1]);
+            $end = self::toMinutes($m[2]);
+            if ($start === null || $end === null || $end <= $start) {
+                return null;
+            }
+            $ranges[] = array($start, $end);
+        }
+        usort($ranges, function ($a, $b) {
+            return $a[0] - $b[0];
+        });
+        for ($i = 1; $i < count($ranges); ++$i) {
+            if ($ranges[$i][0] < $ranges[$i - 1][1]) {
+                return null; // overlapping ranges
+            }
+        }
+
+        return $ranges;
+    }
+
+    public static function formatRanges(array $ranges)
+    {
+        $parts = array();
+        foreach ($ranges as $r) {
+            $parts[] = self::toTime($r[0]) . '-' . self::toTime($r[1]);
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
+     * Exceptions, one per line: "2026-12-25" (whole day) or "2026-12-24 14:00-19:00" (part of the day)
+     *
+     * @return array|null ['Y-m-d' => true (whole day) | [[start, end], ...]], null when a line is not valid
+     */
+    public static function parseExceptions($text, &$badLine = null)
+    {
+        $out = array();
+        foreach (preg_split('/\r\n|\r|\n/', (string) $text) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:\s+(.+))?$/', $line, $m)
+                || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])
+            ) {
+                $badLine = $line;
+
+                return null;
+            }
+            $date = $m[1] . '-' . $m[2] . '-' . $m[3];
+            if (!isset($m[4]) || trim($m[4]) === '') {
+                $out[$date] = true;
+                continue;
+            }
+            $ranges = self::parseRanges($m[4]);
+            if (!$ranges) {
+                $badLine = $line;
+
+                return null;
+            }
+            if (!isset($out[$date]) || $out[$date] !== true) {
+                $out[$date] = array_merge(isset($out[$date]) ? $out[$date] : array(), $ranges);
+            }
+        }
+
+        return $out;
+    }
+
     public static function getSettings()
     {
         $get = function ($key) {
@@ -74,23 +172,28 @@ class EverpsclickandcollectPickup
 
             return ($value === false || $value === null || $value === '') ? self::$defaults[$key] : $value;
         };
-        $openDays = json_decode((string) $get('EVERPSCLICKANDCOLLECT_OPEN_DAYS'), true);
-        if (!is_array($openDays)) {
-            $openDays = json_decode(self::$defaults['EVERPSCLICKANDCOLLECT_OPEN_DAYS'], true);
+        $stored = json_decode((string) Configuration::get('EVERPSCLICKANDCOLLECT_SCHEDULE'), true);
+        $schedule = array();
+        $latest = 0;
+        for ($day = 1; $day <= 7; ++$day) {
+            $text = is_array($stored) && isset($stored[$day]) ? $stored[$day] : self::$defaultSchedule[$day];
+            $ranges = self::parseRanges($text);
+            $schedule[$day] = $ranges ?: array();
+            foreach ($schedule[$day] as $r) {
+                $latest = max($latest, $r[1]);
+            }
         }
         $step = (int) $get('EVERPSCLICKANDCOLLECT_MINUTE_STEP');
         if (!in_array($step, self::$steps)) {
             $step = 15;
         }
-        $earliest = self::toMinutes($get('EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST'));
-        $latest = self::toMinutes($get('EVERPSCLICKANDCOLLECT_PICKUP_LATEST'));
         $closing = self::toMinutes($get('EVERPSCLICKANDCOLLECT_PICKUP_CLOSING'));
+        $exceptions = self::parseExceptions(Configuration::get('EVERPSCLICKANDCOLLECT_CLOSED_DATES'));
 
         return array(
-            'open_days' => array_values(array_map('intval', $openDays)), // 1 = Monday ... 7 = Sunday
-            'closed_dates' => self::getClosedDates(),
-            'earliest' => $earliest === null ? 630 : $earliest,
-            'latest' => $latest === null ? 1140 : $latest,
+            'schedule' => $schedule,
+            'exceptions' => $exceptions ?: array(),
+            'latest' => $latest, // latest pickup time of the week, used in message T1
             'closing' => $closing === null ? 1170 : $closing,
             'step' => $step,
             'now_limit' => max(1, (int) $get('EVERPSCLICKANDCOLLECT_NOW_LIMIT')),
@@ -103,46 +206,142 @@ class EverpsclickandcollectPickup
     }
 
     /**
-     * @return array of 'Y-m-d'
+     * Remove $cut from $ranges
      */
-    public static function getClosedDates()
+    protected static function subtract(array $ranges, array $cut)
     {
-        $raw = (string) Configuration::get('EVERPSCLICKANDCOLLECT_CLOSED_DATES');
-        $dates = array();
-        foreach (preg_split('/[\s,;]+/', $raw) as $line) {
-            $line = trim($line);
-            if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $line, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
-                $dates[] = $line;
+        foreach ($cut as $c) {
+            $next = array();
+            foreach ($ranges as $r) {
+                if ($c[1] <= $r[0] || $c[0] >= $r[1]) {
+                    $next[] = $r;
+                    continue;
+                }
+                if ($c[0] > $r[0]) {
+                    $next[] = array($r[0], $c[0]);
+                }
+                if ($c[1] < $r[1]) {
+                    $next[] = array($c[1], $r[1]);
+                }
             }
+            $ranges = $next;
         }
 
-        return $dates;
+        return $ranges;
     }
 
-    public static function isOpenDay($date, array $settings)
+    /**
+     * Pickup ranges of a date, after exceptions
+     */
+    public static function getDayRanges($date, array $settings)
     {
         $time = strtotime($date . ' 12:00:00');
         if ($time === false) {
-            return false;
+            return array();
+        }
+        $ranges = $settings['schedule'][(int) date('N', $time)];
+        if (isset($settings['exceptions'][$date])) {
+            if ($settings['exceptions'][$date] === true) {
+                return array();
+            }
+            $ranges = self::subtract($ranges, $settings['exceptions'][$date]);
         }
 
-        return in_array((int) date('N', $time), $settings['open_days'])
-            && !in_array($date, $settings['closed_dates']);
+        return array_values($ranges);
     }
 
     /**
-     * Current time rounded up to the next step, in minutes
+     * Can a period start at $t? (at least one step before the end of a range)
      */
-    public static function nowMinutesRoundedUp($now, $step)
+    public static function isValidStart($t, array $ranges, $step)
     {
-        $minutes = (int) date('G', $now) * 60 + (int) date('i', $now) + ((int) date('s', $now) > 0 ? 1 : 0);
+        if ($t % $step !== 0) {
+            return false;
+        }
+        foreach ($ranges as $r) {
+            if ($t >= $r[0] && $t + $step <= $r[1]) {
+                return true;
+            }
+        }
 
-        return (int) (ceil($minutes / $step) * $step);
+        return false;
     }
 
     /**
-     * Business days the customer can choose: today (when a period can still start) and the next ones,
-     * BOOKABLE_DAYS business days in total.
+     * Can a period end at $t?
+     */
+    public static function isValidEnd($t, array $ranges, $step)
+    {
+        if ($t % $step !== 0 && !self::isRangeEnd($t, $ranges)) {
+            return false;
+        }
+        foreach ($ranges as $r) {
+            if ($t > $r[0] && $t <= $r[1]) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected static function isRangeEnd($t, array $ranges)
+    {
+        foreach ($ranges as $r) {
+            if ($r[1] === $t) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function nowMinutes($now)
+    {
+        return (int) date('G', $now) * 60 + (int) date('i', $now);
+    }
+
+    /**
+     * First possible start of a date: now (rounded up to the step) for today, else the first range start
+     *
+     * @return int|null
+     */
+    public static function firstStart($date, array $settings, $now = null)
+    {
+        $now = $now === null ? time() : (int) $now;
+        $ranges = self::getDayRanges($date, $settings);
+        $min = $date === date('Y-m-d', $now) ? self::nowMinutes($now) : 0;
+        foreach ($ranges as $r) {
+            $t = max($r[0], (int) (ceil($min / $settings['step']) * $settings['step']));
+            if ($t % $settings['step'] !== 0) {
+                $t = (int) (ceil($t / $settings['step']) * $settings['step']);
+            }
+            if ($t + $settings['step'] <= $r[1]) {
+                return $t;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Default period for a date: from the first possible start (now for today) to the end of the day's pickup hours
+     *
+     * @return array|null ['date', 'start', 'end']
+     */
+    public static function defaultPeriod($date, array $settings, $now = null)
+    {
+        $start = self::firstStart($date, $settings, $now);
+        if ($start === null) {
+            return null;
+        }
+        $ranges = self::getDayRanges($date, $settings);
+
+        return array('date' => $date, 'start' => $start, 'end' => $ranges[count($ranges) - 1][1]);
+    }
+
+    /**
+     * Days the customer can choose: today (when a period can still start) and the next ones with pickup hours,
+     * BOOKABLE_DAYS days in total.
      *
      * @return array of 'Y-m-d'
      */
@@ -153,33 +352,28 @@ class EverpsclickandcollectPickup
         $day = strtotime(date('Y-m-d', $now) . ' 12:00:00');
         for ($i = 0; $i < 400 && count($dates) < $settings['bookable_days']; ++$i) {
             $date = date('Y-m-d', strtotime('+' . $i . ' day', $day));
-            if (!self::isOpenDay($date, $settings)) {
-                continue;
+            if (self::firstStart($date, $settings, $now) !== null) {
+                $dates[] = $date;
             }
-            if ($i === 0) {
-                // Today only when a period can still start before the latest pickup time
-                $firstStart = max($settings['earliest'], self::nowMinutesRoundedUp($now, $settings['step']));
-                if ($firstStart + $settings['step'] > $settings['latest']) {
-                    continue;
-                }
-            }
-            $dates[] = $date;
         }
 
         return $dates;
     }
 
     /**
-     * Option A is only offered today, on a business day, between the earliest and latest pickup time
+     * Option A is only offered today, during today's pickup hours
      */
     public static function isNowAvailable(array $settings, $now = null)
     {
         $now = $now === null ? time() : (int) $now;
-        $minutes = (int) date('G', $now) * 60 + (int) date('i', $now);
+        $minutes = self::nowMinutes($now);
+        foreach (self::getDayRanges(date('Y-m-d', $now), $settings) as $r) {
+            if ($minutes >= $r[0] && $minutes <= $r[1]) {
+                return true;
+            }
+        }
 
-        return self::isOpenDay(date('Y-m-d', $now), $settings)
-            && $minutes >= $settings['earliest']
-            && $minutes <= $settings['latest'];
+        return false;
     }
 
     /**
@@ -238,8 +432,8 @@ class EverpsclickandcollectPickup
     }
 
     /**
-     * Validate periods. Customers ($strict) may only choose bookable dates and future times;
-     * the back office can set any date.
+     * Validate periods. Customers ($strict) may only choose bookable dates, pickup hours and future times;
+     * the back office can set any date and time on the minute step.
      *
      * @return array [list of valid periods, error code or null]
      *               error codes: too_many, incomplete, bad_date, bad_time, end_before_start, past
@@ -256,7 +450,6 @@ class EverpsclickandcollectPickup
         }
         $bookable = $strict ? self::getBookableDates($settings, $now) : array();
         $today = date('Y-m-d', $now);
-        $nowMinutes = (int) date('G', $now) * 60 + (int) date('i', $now);
         foreach ($filled as $p) {
             if ($p['status'] === 'incomplete') {
                 return array(array(), 'incomplete');
@@ -264,19 +457,24 @@ class EverpsclickandcollectPickup
             if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $p['date'], $m) || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
                 return array(array(), 'bad_date');
             }
-            if ($strict && !in_array($p['date'], $bookable)) {
-                return array(array(), 'bad_date');
-            }
-            foreach (array($p['start'], $p['end']) as $t) {
-                if ($t < $settings['earliest'] || $t > $settings['latest'] || $t % $settings['step'] !== 0) {
-                    return array(array(), 'bad_time');
-                }
-            }
             if ($p['end'] <= $p['start']) {
                 return array(array(), 'end_before_start');
             }
-            if ($strict && $p['date'] === $today && $p['start'] < $nowMinutes) {
-                return array(array(), 'past');
+            if ($strict) {
+                if (!in_array($p['date'], $bookable)) {
+                    return array(array(), 'bad_date');
+                }
+                if ($p['date'] === $today && $p['start'] < self::nowMinutes($now) - $settings['step']) {
+                    return array(array(), 'past');
+                }
+                $ranges = self::getDayRanges($p['date'], $settings);
+                if (!self::isValidStart($p['start'], $ranges, $settings['step'])
+                    || !self::isValidEnd($p['end'], $ranges, $settings['step'])
+                ) {
+                    return array(array(), 'bad_time');
+                }
+            } elseif ($p['start'] % $settings['step'] !== 0 || $p['end'] > 24 * 60) {
+                return array(array(), 'bad_time');
             }
             $valid[] = array('date' => $p['date'], 'start' => (int) $p['start'], 'end' => (int) $p['end']);
         }
