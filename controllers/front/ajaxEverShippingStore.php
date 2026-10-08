@@ -48,26 +48,30 @@ class EverpsclickandcollectAjaxEverShippingStoreModuleFrontController extends Mo
             )));
             return;
         }
-        $entries = array();
+        // Keep only what is already valid: the full check is done when the customer presses "Continue"
+        $P = 'EverpsclickandcollectPickup';
+        $mode = '';
+        $merged = array();
         if ((bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE')) {
-            $entries = EverpsclickandcollectSlots::parseEntries(
-                (array) Tools::getValue('everclickncollect_slots', array())
-            );
+            $settings = $P::getSettings();
+            $mode = (string) Tools::getValue('evercnc_mode');
+            if ($mode === $P::MODE_LATER) {
+                $valid = array();
+                foreach ($P::readPeriods(Tools::getValue('evercnc_periods', array())) as $period) {
+                    list($ok, $error) = $P::validatePeriods(array($period), $settings, true);
+                    if (!$error) {
+                        $valid = array_merge($valid, $ok);
+                    }
+                }
+                $merged = $P::mergePeriods(array_slice($valid, 0, $P::MAX_PERIODS));
+            } elseif ($mode !== $P::MODE_NOW || !$P::isNowAvailable($settings)) {
+                $mode = '';
+            }
         }
-        $this->module->savePickup((int) $cart->id, $idStore, $entries);
+        $this->module->savePickupChoice((int) $cart->id, $idStore, $mode, $merged);
         $this->context->cookie->__set('everclickncollect_id', $idStore);
-        $errors = array();
-        if ((bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE') && $entries) {
-            $errors = EverpsclickandcollectSlots::validateSelection(
-                $idStore,
-                (int) $this->context->language->id,
-                (int) $cart->id,
-                $entries
-            );
-        }
         $this->ajaxRender(json_encode(array(
             'return' => true,
-            'warning' => $errors ? $this->module->getSlotErrorMessage($errors[0]) : '',
         )));
     }
 }

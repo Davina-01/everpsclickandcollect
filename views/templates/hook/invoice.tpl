@@ -23,10 +23,10 @@
         <td style="width:30%;">{l s='Store name' mod='everpsclickandcollect'}</td>
         <td style="width:70%;">{$store.name|escape:'htmlall':'UTF-8'}<br>{$store.address.formatted nofilter}</td>
     </tr>
-    {if $pickup_lines}
+    {if $pickup.mode}
     <tr>
         <td>{l s='Pickup time' mod='everpsclickandcollect'}</td>
-        <td>{foreach from=$pickup_lines item=line}<b>{$line.date|escape:'htmlall':'UTF-8'}</b>{if $line.slots} : {$line.slots|escape:'htmlall':'UTF-8'}{/if}<br>{/foreach}</td>
+        <td>{if $pickup.title}<b>{$pickup.title|escape:'htmlall':'UTF-8'}</b><br>{/if}{foreach from=$pickup.lines item=line}{$line|escape:'htmlall':'UTF-8'}<br>{/foreach}{if $pickup_for_staff && !$pickup.prepare}<b>{l s='Prepare on arrival' mod='everpsclickandcollect'}</b>{/if}</td>
     </tr>
     {/if}
 </table>

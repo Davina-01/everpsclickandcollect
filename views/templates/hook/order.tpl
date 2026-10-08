@@ -33,12 +33,13 @@
                     <th>{l s='Store address' mod='everpsclickandcollect'}</th>
                     <td>{$store.address.formatted nofilter}</td>
                 </tr>
-                {if $pickup_lines}
+                {if $pickup.mode}
                 <tr>
                     <th>{l s='Pickup time' mod='everpsclickandcollect'}</th>
                     <td>
-                        {foreach from=$pickup_lines item=line}
-                        <div><strong>{$line.date|escape:'htmlall':'UTF-8'}</strong>{if $line.slots} : {$line.slots|escape:'htmlall':'UTF-8'}{/if}</div>
+                        {if $pickup.title}<strong>{$pickup.title|escape:'htmlall':'UTF-8'}</strong>{/if}
+                        {foreach from=$pickup.lines item=line}
+                        <div>{$line|escape:'htmlall':'UTF-8'}</div>
                         {/foreach}
                     </td>
                 </tr>

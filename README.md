@@ -37,3 +37,14 @@ This version is a fork of [TeamEver/everpsclickandcollect](https://github.com/Te
 - The custom checkout message (e.g. a WhatsApp link for other pickup times) is now shown below the time slots.
 - Slot capacity counts every order overlapping a slot, so bookings made in another mode or slot length are respected.
 - Orders saved by 3.2.0 are still read and displayed correctly.
+
+## 3.4.0 (unofficial fork)
+
+Pickup time redesigned: customers are rarely sure when they will come, so instead of booking one slot they choose:
+
+- **A. Pick up now** – only offered today between the earliest and latest pickup time; message T4.
+- **B. Pick up later** – up to 3 optional periods `date HH:MM – HH:MM` (hour + minute pickers, minute step 5/10/15/20/30/60). Overlapping or touching periods of the same day are merged. Dates: today and the next business days (closed days are skipped).
+
+Orders choosing B are **prepared on arrival** (not in advance) when no period is given, when the first and last dates are more than N days apart, or when the merged periods last more than N hours (both rules can be switched off). Messages T1–T6 are editable per language and can be switched off; variables `{最晚取货时间}`/`{latest}`, `{关门时间}`/`{closing}`, `{立即取货时限}`/`{now_limit}`.
+
+Back office: "A · …" / "B · …" with a "Prepare on arrival" badge on the order page and in the order list, staff can change the pickup time of an order, delivery slip shows the flag. Chinese translation added. Orders saved by 3.2.0 / 3.3.0 are still displayed.

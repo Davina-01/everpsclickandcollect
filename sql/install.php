@@ -28,6 +28,10 @@ $sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'everpsclickandcollect` 
     `id_store` int(11) NOT NULL,
     `delivery_date` varchar(255) DEFAULT NULL,
     `delivery_hour` text DEFAULT NULL,
+    `pickup_mode` varchar(10) DEFAULT NULL,
+    `pickup_periods` text DEFAULT NULL,
+    `pickup_prepare` tinyint(1) DEFAULT NULL,
+    `pickup_summary` varchar(255) DEFAULT NULL,
     PRIMARY KEY  (`id_cart`)
 ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
 
