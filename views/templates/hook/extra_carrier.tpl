@@ -118,10 +118,11 @@
 			{/if}
 		</div>
 
-		{if $pickup_texts.NOTE || $pickup_texts.T2 || $pickup_texts.T1}
+		{if $pickup_texts.NOTE || $pickup_texts.T2 || $pickup_texts.T3 || $pickup_texts.T1}
 		<div class="evercnc-notes">
 			{if $pickup_texts.NOTE}<p class="evercnc-notes__title">{$pickup_texts.NOTE nofilter}</p>{/if}
 			{if $pickup_texts.T2}<p>{$pickup_texts.T2 nofilter}</p>{/if}
+			{if $pickup_texts.T3}<p>{$pickup_texts.T3 nofilter}</p>{/if}
 			{if $pickup_texts.T1}<p>{$pickup_texts.T1 nofilter}</p>{/if}
 		</div>
 		{/if}

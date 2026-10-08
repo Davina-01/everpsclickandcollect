@@ -100,6 +100,15 @@ class Everpsclickandcollect extends CarrierModule
                 Configuration::updateValue($key, $value);
             }
         }
+        foreach (array(
+            'EVERPSCLICKANDCOLLECT_COLOR_MAIN' => '#1b82d6',
+            'EVERPSCLICKANDCOLLECT_COLOR_WARNING' => '#e8a33d',
+            'EVERPSCLICKANDCOLLECT_COLOR_NOTES' => '#5f6f82',
+        ) as $key => $color) {
+            if (Configuration::get($key) === false) {
+                Configuration::updateValue($key, $color);
+            }
+        }
         if (Configuration::get('EVERPSCLICKANDCOLLECT_SCHEDULE') === false) {
             Configuration::updateValue('EVERPSCLICKANDCOLLECT_SCHEDULE', json_encode(EverpsclickandcollectPickup::$defaultSchedule));
         }
@@ -112,12 +121,14 @@ class Everpsclickandcollect extends CarrierModule
                 $iso = Tools::strtolower($lang['iso_code']);
                 // Keep texts edited by the merchant. A language added later gets a copy of the
                 // default language text: replace it when it is still an untouched default.
-                $untouchedOther = $current === $byIso['en'] && $iso !== 'en' && isset($byIso[$iso]);
+                // French is the default language: languages without their own default text get the French one
+                $default = isset($byIso[$iso]) ? $byIso[$iso] : $byIso['fr'];
+                $untouchedOther = $current === $byIso['en'] && $iso !== 'en';
                 if ($current !== false && $current !== '' && !$untouchedOther) {
                     $values[(int) $lang['id_lang']] = $current;
                     continue;
                 }
-                $values[(int) $lang['id_lang']] = isset($byIso[$iso]) ? $byIso[$iso] : $byIso['en'];
+                $values[(int) $lang['id_lang']] = $default;
             }
             Configuration::updateValue($key, $values);
             if (Configuration::get($key . '_ON') === false) {
@@ -148,7 +159,7 @@ class Everpsclickandcollect extends CarrierModule
 
     /**
      * Default customer messages, in display order.
-     * NOTE, T2, T1: small notes below the pickup time (title, then notes, T1 last).
+     * NOTE, T2, T3, T1: small notes below the pickup time (title, then notes, T1 last).
      * T5, T6: "we may not prepare in advance" warnings.
      * Variables: {latest} (latest pickup time of the week), {closing}, {now_limit}, {whatsapp} (WhatsApp link)
      */
@@ -160,8 +171,12 @@ class Everpsclickandcollect extends CarrierModule
                 'en' => 'Please keep to the time you chose.',
             ),
             'T2' => array(
-                'fr' => 'L\'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée. Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d\'horaire, laissez-nous un message sur {whatsapp}.',
-                'en' => 'The number of customers in the shop varies, so we cannot guarantee your order will be ready as soon as you arrive. As we are often busy with customers and cannot always answer the phone, please leave us a message on {whatsapp} to change your pickup time.',
+                'fr' => 'L\'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée.',
+                'en' => 'The number of customers in the shop varies, so we cannot guarantee your order will be ready as soon as you arrive.',
+            ),
+            'T3' => array(
+                'fr' => 'Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d\'horaire, laissez-nous un message sur {whatsapp}.',
+                'en' => 'As we are often busy with customers and cannot always answer the phone, please leave us a message on {whatsapp} to change your pickup time.',
             ),
             'T1' => array(
                 'fr' => 'Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l\'avance sur {whatsapp} : un collègue restera au magasin pour vous attendre.',
@@ -208,8 +223,6 @@ class Everpsclickandcollect extends CarrierModule
                 'EVERPSCLICKANDCOLLECT_COLOR_MAIN',
                 'EVERPSCLICKANDCOLLECT_COLOR_WARNING',
                 'EVERPSCLICKANDCOLLECT_COLOR_NOTES',
-                'EVERPSCLICKANDCOLLECT_TEXT_T3',
-                'EVERPSCLICKANDCOLLECT_TEXT_T3_ON',
                 'EVERPSCLICKANDCOLLECT_TEXT_T4',
                 'EVERPSCLICKANDCOLLECT_TEXT_T4_ON',
             )
@@ -328,7 +341,8 @@ class Everpsclickandcollect extends CarrierModule
         $helper->show_toolbar = false;
         $helper->table = $this->table;
         $helper->module = $this;
-        $helper->default_form_language = $this->context->language->id;
+        // Multilingual fields open on the shop default language (French)
+        $helper->default_form_language = (int) Configuration::get('PS_LANG_DEFAULT');
         $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG', 0);
 
         $helper->identifier = $this->identifier;
@@ -832,7 +846,7 @@ class Everpsclickandcollect extends CarrierModule
             array(
                 'type' => 'color',
                 'label' => $this->l('Main color'),
-                'desc' => $this->l('Selected choices, buttons and links. Empty: color of your theme'),
+                'desc' => $this->l('Selected choices, buttons and links (default #1b82d6)'),
                 'name' => 'EVERPSCLICKANDCOLLECT_COLOR_MAIN',
             ),
             array(
@@ -882,6 +896,7 @@ class Everpsclickandcollect extends CarrierModule
         return array(
             'NOTE' => $this->l('Title of the small notes below the pickup time (all customers)'),
             'T2' => $this->l('Note below the title (all customers)'),
+            'T3' => $this->l('Second note (all customers)'),
             'T1' => $this->l('Last note (all customers)'),
             'T5' => $this->l('Warning box: customer chose "Pick up later" without any time'),
             'T6' => $this->l('Warning box: time range too wide (dates too far apart or total time too long)'),

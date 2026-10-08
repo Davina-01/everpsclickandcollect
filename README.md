@@ -5,7 +5,7 @@ Click & collect (store pickup) carrier for PrestaShop 1.7 / 8, with a **pickup t
 > This is an unofficial fork of [TeamEver/everpsclickandcollect](https://github.com/TeamEver/everpsclickandcollect). It is not an official Team Ever release.
 > Original work © Team Ever, released under the [Academic Free License 3.0](LICENSE.md). The changes of this fork are released under the same license.
 
-Tested on **PrestaShop 8.2.0** (classic theme). Customer and back office texts: **English** and **French**.
+Tested on **PrestaShop 8.2.0** (classic theme). Customer and back office texts: **French** (default) and **English**; languages without their own default texts get the French ones.
 
 ---
 
@@ -26,7 +26,7 @@ Tested on **PrestaShop 8.2.0** (classic theme). Customer and back office texts: 
 3. **Warning box** (rounded box) when the order will probably **not be prepared in advance**:
    - **T5** – "Pick up later" without any time;
    - **T6** – time range too wide (see *Prepare on arrival* below).
-4. **Small notes** below the pickup time, for every customer (title, then **T2**, then **T1** last). A `{whatsapp}` variable shows a clickable WhatsApp link.
+4. **Small notes** below the pickup time, for every customer (title, then **T2**, **T3**, and **T1** last). A `{whatsapp}` variable shows a clickable WhatsApp link.
 5. Pressing **Continue** checks everything again on the server: no choice, incomplete period, past time, time outside the pickup hours… are refused with a clear message.
 
 ### Prepare on arrival
@@ -87,10 +87,10 @@ The two last rules can be switched off. The customer sees the matching warning b
 | Do not prepare when dates are too far apart / Maximum days | on / 1 | See *Prepare on arrival* |
 | Do not prepare when the total time is too long / Maximum total time | on / 6 h | Multiple of 0.5 h |
 | WhatsApp link | — | e.g. `https://wa.me/33612345678`, used by `{whatsapp}` |
-| Main color | theme color | Selected choices, buttons, links |
-| Warning box color | orange | Border of the warning box, background is a light shade |
-| Notes text color | grey | Small notes |
-| Texts NOTE, T2, T1, T5, T6 | see below | Editable per language, each can be switched off |
+| Main color | `#1b82d6` | Selected choices, buttons, links |
+| Warning box color | `#e8a33d` | Border of the warning box, background is a light shade |
+| Notes text color | `#5f6f82` | Small notes |
+| Texts NOTE, T2, T3, T1, T5, T6 | see below | Editable per language (French by default), each can be switched off |
 
 Checks when saving: valid ranges without overlap, minutes on the minute step, closing time not earlier than the latest pickup time, valid exception lines, colors `#rrggbb`, WhatsApp link as a full address. A warning is shown when the maximum total time is longer than a day of pickup hours (the rule can then only apply to several days).
 
@@ -99,7 +99,8 @@ Checks when saving: valid ranges without overlap, minutes on the minute step, cl
 | Code | Where | Default (French) |
 |---|---|---|
 | NOTE | Title of the small notes | Merci de respecter l'horaire choisi. |
-| T2 | Note | L'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée. Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d'horaire, laissez-nous un message sur {whatsapp}. |
+| T2 | Note | L'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée. |
+| T3 | Note | Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d'horaire, laissez-nous un message sur {whatsapp}. |
 | T1 | Last note | Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l'avance sur {whatsapp} : un collègue restera au magasin pour vous attendre. |
 | T5 | Warning box, no time given | Vous n'avez pas indiqué d'heure d'arrivée : nous ne préparerons peut-être pas votre commande à l'avance. Merci de votre compréhension. |
 | T6 | Warning box, time range too wide | La plage horaire choisie est large : nous ne préparerons peut-être pas votre commande à l'avance. Merci de votre compréhension. |

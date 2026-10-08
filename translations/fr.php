@@ -297,3 +297,5 @@ $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_c85984e18428e
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_d6b553fefd127295f55c129432b60944'] = 'Cadre d\'avertissement : plage horaire trop large (dates trop éloignées ou durée totale trop longue)';
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_80538692e72b5ac4bd914ef33a0158e3'] = 'Lien WhatsApp';
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_87036278bc2d05259718a16a5367c655'] = 'ex. https://wa.me/33612345678. Affiché comme lien « WhatsApp » là où les textes contiennent {whatsapp}';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_76f7c3d55be929caf16bcdc04002481b'] = 'Choix sélectionnés, boutons et liens (par défaut #1b82d6)';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_71d5351c4ca2f8537146f9788d1fbae0'] = 'Deuxième note (tous les clients)';

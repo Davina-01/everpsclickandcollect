@@ -74,8 +74,8 @@ function upgrade_module_3_4_0($module)
         Configuration::deleteByName($key);
     }
 
-    // T3 and T4 do not exist anymore (T3 merged into T2, T4 removed)
-    foreach (array('T3', 'T4') as $code) {
+    // T4 does not exist anymore
+    foreach (array('T4') as $code) {
         Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code);
         Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON');
     }
