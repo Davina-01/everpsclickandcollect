@@ -286,3 +286,7 @@ $_MODULE['<{everpsclickandcollect}prestashop>order_367d2781420e71cba25792536481d
 $_MODULE['<{everpsclickandcollect}prestashop>admin_order_367d2781420e71cba25792536481d65b'] = 'Retrait par';
 $_MODULE['<{everpsclickandcollect}prestashop>admin_order_c26c2007b63873ae4e982df5392e3fc3'] = 'Client ou un proche';
 $_MODULE['<{everpsclickandcollect}prestashop>admin_order_5055d1a4444c630d6839f48ab48aef91'] = 'Coursier';
+$_MODULE['<{everpsclickandcollect}prestashop>delivery_slip_764d3b516207f87a61658cdbf9a4a9bf'] = 'Retrait en magasin (click & collect)';
+$_MODULE['<{everpsclickandcollect}prestashop>delivery_slip_e72dca5d5a8a4706a206f3225324bf44'] = 'Magasin';
+$_MODULE['<{everpsclickandcollect}prestashop>delivery_slip_73f3e7512043f3e1ff3cf3b4767b7b37'] = 'Heure de retrait';
+$_MODULE['<{everpsclickandcollect}prestashop>delivery_slip_f50177bb219029c4c6a5b51168314330'] = 'Préparer à l\'arrivée';

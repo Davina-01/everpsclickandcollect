@@ -56,9 +56,9 @@ function upgrade_module_3_4_0($module)
         Configuration::deleteByName($key);
     }
 
-    // Pickup information is not printed on invoices and delivery slips anymore
+    // Pickup information is printed on delivery slips only, not on invoices
     $module->unregisterHook('displayPDFInvoice');
-    $module->unregisterHook('displayPDFDeliverySlip');
+    $module->registerHook('displayPDFDeliverySlip');
 
     // Pickup hours per week day replace "business days" + earliest / latest time
     $schedule = array();

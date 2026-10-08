@@ -51,4 +51,4 @@ Pickup time redesigned: customers are rarely sure when they will come, so instea
 
 Orders choosing B are **prepared on arrival** (not in advance) when no period is given, when the first and last dates are more than N days apart, or when the merged periods last more than N hours (both rules can be switched off). Messages T1–T6 are editable per language (English, French) and can be switched off; variables `{latest}` (latest pickup time of the week), `{closing}`, `{now_limit}`.
 
-Back office: "A · …" / "B · …" with a "Prepare on arrival" badge on the order page and in the order list; staff can change the pickup time of an order (any date). Pickup information is no longer printed on invoices and delivery slips. Orders saved by 3.2.0 / 3.3.0 are still displayed.
+Back office: "A · …" / "B · …" with a "Prepare on arrival" badge on the order page and in the order list; staff can change the pickup time of an order (any date). The delivery slip shows the pickup time and the "Prepare on arrival" flag; nothing is printed on invoices. Orders saved by 3.2.0 / 3.3.0 are still displayed.

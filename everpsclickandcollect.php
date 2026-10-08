@@ -73,6 +73,7 @@ class Everpsclickandcollect extends CarrierModule
             $this->registerHook('displayCarrierExtraContent') &&
             $this->registerHook('displayOrderConfirmation') &&
             $this->registerHook('displayAdminOrderMain') &&
+            $this->registerHook('displayPDFDeliverySlip') &&
             $this->registerHook('actionValidateStepComplete') &&
             $this->registerHook('actionOrderGridDefinitionModifier') &&
             $this->registerHook('actionOrderGridQueryBuilderModifier') &&
@@ -1997,6 +1998,15 @@ class Everpsclickandcollect extends CarrierModule
     {
         // Kept for shops where the module was installed before 3.2.0
         return $this->hookDisplayAdminOrderMain($params);
+    }
+
+    /**
+     * Delivery slip (used by the staff to prepare the order): pickup time and "prepare on arrival".
+     * Not printed on invoices.
+     */
+    public function hookDisplayPDFDeliverySlip($params)
+    {
+        return $this->renderPickupInfo(new Order((int) $params['object']->id_order), 'delivery_slip.tpl', true);
     }
 
     /**
