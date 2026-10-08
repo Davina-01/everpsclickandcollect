@@ -34,12 +34,6 @@
                     <th style="width:30%;">{l s='Store name' mod='everpsclickandcollect'}</th>
                     <td><strong>{$store.name|escape:'htmlall':'UTF-8'}</strong></td>
                 </tr>
-                {if $clickncollect.pickup_by}
-                <tr>
-                    <th>{l s='Collected by' mod='everpsclickandcollect'}</th>
-                    <td><strong>{if $clickncollect.pickup_by == 'courier'}{l s='Courier' mod='everpsclickandcollect'}{else}{l s='Customer or someone they know' mod='everpsclickandcollect'}{/if}</strong></td>
-                </tr>
-                {/if}
                 <tr>
                     <th>{l s='Pickup time' mod='everpsclickandcollect'}</th>
                     <td>
@@ -56,11 +50,6 @@
         <details class="mt-2">
             <summary class="btn btn-outline-secondary btn-sm">{l s='Change pickup time' mod='everpsclickandcollect'}</summary>
             <form method="post" action="{$pickup_edit_url|escape:'htmlall':'UTF-8'}" class="mt-3">
-                <div class="form-group">
-                    <strong class="mr-2">{l s='Collected by' mod='everpsclickandcollect'} :</strong>
-                    <label class="mr-3"><input type="radio" name="evercnc_by" value="self"{if $pickup_edit_by != 'courier'} checked{/if}> {l s='Customer or someone they know' mod='everpsclickandcollect'}</label>
-                    <label><input type="radio" name="evercnc_by" value="courier"{if $pickup_edit_by == 'courier'} checked{/if}> {l s='Courier' mod='everpsclickandcollect'}</label>
-                </div>
                 <div class="form-group">
                     <label class="mr-3"><input type="radio" name="evercnc_mode" value="now"{if $pickup_edit_mode == 'now'} checked{/if}> A · {l s='Pick up now' mod='everpsclickandcollect'}</label>
                     <label><input type="radio" name="evercnc_mode" value="later"{if $pickup_edit_mode != 'now'} checked{/if}> B · {l s='Pick up later' mod='everpsclickandcollect'}</label>

@@ -46,12 +46,6 @@
 
 	{if $ask_date}
 	<div class="evercnc-booking" data-settings="{$pickup_js|escape:'htmlall':'UTF-8'}">
-		<p class="evercnc-title">{l s='Who will collect the order?' mod='everpsclickandcollect'}</p>
-		<div class="evercnc-collector" role="radiogroup">
-			<label class="evercnc-chip"><input type="radio" name="evercnc_by" value="self"{if $pickup_by != 'courier'} checked{/if}> {l s='Me or someone I know' mod='everpsclickandcollect'}</label>
-			<label class="evercnc-chip"><input type="radio" name="evercnc_by" value="courier"{if $pickup_by == 'courier'} checked{/if}> {l s='A courier' mod='everpsclickandcollect'}</label>
-		</div>
-
 		<p class="evercnc-title">{l s='When will you pick up your order?' mod='everpsclickandcollect'}</p>
 
 		<div class="evercnc-modes" role="radiogroup">

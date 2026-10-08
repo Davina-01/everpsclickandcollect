@@ -45,8 +45,6 @@ Pickup time redesigned: customers are rarely sure when they will come, so instea
 - **A. Pick up now** – only offered today during today's pickup hours; message T4.
 - **B. Pick up later** – up to 3 periods `date HH:MM – HH:MM` (hour + minute pickers, minute step 5/10/15/20/30/60). Prefilled with today from now to the end of the pickup hours; an added line takes the next pickup day, whole pickup hours. The customer can change or clear them. Overlapping or touching periods of the same day are merged.
 
-**Who will collect the order?** "Me or someone I know" (default) or "A courier", for both options; shown on the confirmation page, the back office order page and list, and in emails. Staff can change it.
-
 **Pickup hours** are set per week day in the module (one or several ranges, e.g. `10:30-14:00, 16:00-19:00`; empty = no pickup that day), independently from the store opening hours. "No pickup on these dates" closes a whole date (`2026-12-25`) or part of it (`2026-12-24 14:00-19:00`).
 
 Orders choosing B are **prepared on arrival** (not in advance) when no period is given, when the first and last dates are more than N days apart, or when the merged periods last more than N hours (both rules can be switched off). Messages T1–T6 are editable per language (English, French) and can be switched off; variables `{latest}` (latest pickup time of the week), `{closing}`, `{now_limit}`.

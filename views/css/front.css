@@ -153,9 +153,3 @@
 	.evercnc .evercnc-period .evercnc-p-date { flex: 1 0 100%; }
 	.evercnc-period { padding-bottom: 0.5rem; border-bottom: 1px dashed var(--evercnc-border); }
 }
-
-/* Who collects the order */
-.evercnc-collector { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.25rem; }
-.evercnc-chip { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; padding: 0.45rem 0.85rem; border: 1px solid var(--evercnc-border); border-radius: 2rem; cursor: pointer; font-weight: normal; background: #fff; }
-.evercnc-chip input { accent-color: var(--evercnc-primary); }
-.evercnc-chip:has(input:checked) { border-color: var(--evercnc-primary); background: var(--evercnc-primary-soft); color: var(--evercnc-primary); }

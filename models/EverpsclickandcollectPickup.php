@@ -27,10 +27,6 @@ class EverpsclickandcollectPickup
     const MODE_LATER = 'later';
     const MAX_PERIODS = 3;
 
-    /** Who collects the order */
-    const BY_SELF = 'self';
-    const BY_COURIER = 'courier';
-
     const REASON_EMPTY = 'empty';
     const REASON_SPAN = 'span';
     const REASON_DURATION = 'duration';
@@ -167,11 +163,6 @@ class EverpsclickandcollectPickup
         }
 
         return $out;
-    }
-
-    public static function readCollector($value)
-    {
-        return $value === self::BY_COURIER ? self::BY_COURIER : self::BY_SELF;
     }
 
     public static function getSettings()
