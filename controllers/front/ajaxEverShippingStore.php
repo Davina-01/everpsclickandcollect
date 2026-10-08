@@ -48,25 +48,21 @@ class EverpsclickandcollectAjaxEverShippingStoreModuleFrontController extends Mo
             )));
             return;
         }
-        $date = null;
-        $slots = array();
+        $entries = array();
         if ((bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE')) {
-            $postedDate = (string) Tools::getValue('everclickncollect_date');
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $postedDate)) {
-                $date = $postedDate;
-                $slots = EverpsclickandcollectSlots::splitSlots((array) Tools::getValue('everclickncollect_slots', array()));
-            }
+            $entries = EverpsclickandcollectSlots::parseEntries(
+                (array) Tools::getValue('everclickncollect_slots', array())
+            );
         }
-        $this->module->savePickup((int) $cart->id, $idStore, $date, $slots);
+        $this->module->savePickup((int) $cart->id, $idStore, $entries);
         $this->context->cookie->__set('everclickncollect_id', $idStore);
         $errors = array();
-        if ((bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE') && $date && $slots) {
+        if ((bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE') && $entries) {
             $errors = EverpsclickandcollectSlots::validateSelection(
                 $idStore,
                 (int) $this->context->language->id,
                 (int) $cart->id,
-                $date,
-                $slots
+                $entries
             );
         }
         $this->ajaxRender(json_encode(array(

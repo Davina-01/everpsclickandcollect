@@ -28,3 +28,12 @@ This version is a fork of [TeamEver/everpsclickandcollect](https://github.com/Te
 - "Continue" on the shipping step is blocked until a valid date and slot are chosen (server-side check).
 - Pickup date and time shown on order confirmation, back office order page, invoice / delivery slip PDF, emails, and as a filterable "Pickup" column in the back office order list.
 - PrestaShop 8.2 fixes: order confirmation block never displayed, stale cached carrier block, `displayAdminOrderMain`, undefined variable in store email, PHP 8.2 deprecations, uninstall failure, remote version check removed.
+
+## 3.3.0
+
+- New checkout layout: store list, day tabs with arrows, rounded slot buttons in the theme color, legend (available / selected / full / not available) and a summary of the chosen pickup times.
+- Slots can be selected on several days (e.g. this afternoon and tomorrow morning).
+- New "Time slot mode" setting: fixed length slots, or whole opening periods ("Morning 09:00 - 12:00", "Afternoon 14:00 - 19:00"). A period stays bookable on the same day while it can still be prepared in time.
+- The custom checkout message (e.g. a WhatsApp link for other pickup times) is now shown below the time slots.
+- Slot capacity counts every order overlapping a slot, so bookings made in another mode or slot length are respected.
+- Orders saved by 3.2.0 are still read and displayed correctly.

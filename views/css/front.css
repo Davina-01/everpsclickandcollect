@@ -45,26 +45,81 @@
 		white-space: nowrap;
 	}
 }
-/* Pickup store, date and time slots (3.2.0) */
-.evercnc { padding: 0.5rem 0 1rem; text-align: left; }
+/* Pickup store, dates and time slots (3.3.0)
+ * Colors follow the theme: override --evercnc-primary in your theme CSS if needed. */
+.evercnc {
+	--evercnc-primary: var(--bs-primary, #24b9d7);
+	--evercnc-primary-soft: rgba(36, 185, 215, 0.10);
+	--evercnc-full: #f3c2c2;
+	--evercnc-full-text: #a94442;
+	--evercnc-past: #e9e9e9;
+	--evercnc-border: #dcdcdc;
+	padding: 0.5rem 0 1rem;
+	text-align: left;
+}
+@supports (background: color-mix(in srgb, red 10%, transparent)) {
+	.evercnc { --evercnc-primary-soft: color-mix(in srgb, var(--evercnc-primary) 10%, transparent); }
+}
+.evercnc [hidden] { display: none !important; }
 .evercnc label, .evercnc .evercnc-label { text-align: left; }
-.evercnc-msg { margin-bottom: 0.75rem; }
-.evercnc-store { border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; background: #fff; }
-.evercnc-store--active { border-color: #24b9d7; }
-.evercnc-store__head { display: flex; align-items: flex-start; gap: 0.75rem; margin: 0; cursor: pointer; font-weight: normal; }
-.evercnc-store__head input[type=radio] { margin-top: 0.3rem; }
-.evercnc-store__img { max-width: 80px; height: auto; }
-.evercnc-booking { margin-top: 0.75rem; }
-.evercnc-label { display: block; font-weight: 600; margin: 0.5rem 0 0.35rem; }
-.evercnc-date { max-width: 320px; }
-.evercnc-slots { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.evercnc-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin: 1rem 0 0.5rem; color: #333; }
+.evercnc-msg { margin: 0.75rem 0; }
+
+/* Stores */
+.evercnc-stores { border-top: 1px solid var(--evercnc-border); }
+.evercnc-store { display: flex; align-items: flex-start; gap: 0.75rem; margin: 0; padding: 0.65rem 0.25rem; border-bottom: 1px solid var(--evercnc-border); cursor: pointer; font-weight: normal; }
+.evercnc-store input[type=radio] { margin-top: 0.25rem; accent-color: var(--evercnc-primary); }
+.evercnc-store__img { max-width: 64px; height: auto; }
+.evercnc-store__info strong { display: block; font-size: 0.9rem; }
+.evercnc-store__info small { color: #777; }
+.evercnc-store--active .evercnc-store__info strong { color: var(--evercnc-primary); }
+
+/* Day tabs */
+.evercnc-tabs { display: flex; align-items: stretch; border-bottom: 1px solid var(--evercnc-border); }
+.evercnc-tabs__arrow { flex: 0 0 2rem; border: 0; background: none; font-size: 1.5rem; line-height: 1; color: #888; cursor: pointer; padding: 0; }
+.evercnc-tabs__arrow:hover { color: var(--evercnc-primary); }
+.evercnc-tabs__list { display: flex; flex: 1 1 auto; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; }
+.evercnc-tabs__list::-webkit-scrollbar { display: none; }
+.evercnc-tab { position: relative; flex: 0 0 auto; min-width: 5.5rem; padding: 0.45rem 1.4rem 0.55rem 0.9rem; border: 0; border-bottom: 3px solid transparent; background: none; color: #666; cursor: pointer; text-align: center; line-height: 1.2; }
+.evercnc-tab:hover { color: var(--evercnc-primary); }
+.evercnc-tab__day { display: block; font-size: 0.75rem; }
+.evercnc-tab__date { display: block; font-weight: 700; font-size: 0.9rem; }
+.evercnc-tab--active { color: var(--evercnc-primary); border-bottom-color: var(--evercnc-primary); }
+.evercnc-tab__badge { position: absolute; top: 0.15rem; right: 0.1rem; min-width: 1.1rem; height: 1.1rem; padding: 0 0.25rem; border-radius: 1rem; background: var(--evercnc-primary); color: #fff; font-size: 0.7rem; font-weight: 700; line-height: 1.1rem; }
+
+/* Slots */
+.evercnc-panel { padding: 1rem 0.25rem 0.5rem; }
+.evercnc-slots { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .evercnc-slot { margin: 0; cursor: pointer; }
 .evercnc-slot input { position: absolute; opacity: 0; pointer-events: none; }
-.evercnc-slot > span { display: inline-block; min-width: 7.5rem; text-align: center; padding: 0.4rem 0.6rem; border: 1px solid #bbb; border-radius: 4px; background: #f8f8f8; font-size: 0.9rem; }
-.evercnc-slot input:checked + span { background: #24b9d7; border-color: #24b9d7; color: #fff; }
-.evercnc-slot input:focus-visible + span { outline: 2px solid #24b9d7; outline-offset: 2px; }
-.evercnc-slot--full { cursor: not-allowed; }
-.evercnc-slot--full > span { opacity: 0.45; }
+.evercnc-slot > span { display: inline-block; min-width: 8rem; padding: 0.4rem 0.8rem; border: 1px solid var(--evercnc-primary); border-radius: 2rem; background: var(--evercnc-primary-soft); color: var(--evercnc-primary); font-size: 0.85rem; text-align: center; transition: background-color 0.15s, color 0.15s; }
+.evercnc-slot:hover > span { background: var(--evercnc-primary); color: #fff; opacity: 0.85; }
+.evercnc-slot input:checked + span { background: var(--evercnc-primary); color: #fff; opacity: 1; }
+.evercnc-slot input:focus-visible + span { outline: 2px solid var(--evercnc-primary); outline-offset: 2px; }
+.evercnc-slot--full, .evercnc-slot--past { cursor: not-allowed; }
+.evercnc-slot--full > span, .evercnc-slot--full:hover > span { background: var(--evercnc-full); border-color: var(--evercnc-full); color: var(--evercnc-full-text); opacity: 1; }
 .evercnc-slot--full .evercnc-slot__time { text-decoration: line-through; }
-.evercnc-slot--full em { font-style: normal; }
+.evercnc-slot--past > span, .evercnc-slot--past:hover > span { background: var(--evercnc-past); border-color: var(--evercnc-past); color: #999; opacity: 1; }
+.evercnc-slots--periods .evercnc-slot > span { min-width: 11rem; padding: 0.6rem 1rem; border-radius: 0.5rem; }
+.evercnc-slot__name { display: block; font-size: 0.9rem; }
+
+/* Legend and summary */
+.evercnc-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; margin: 0.75rem 0 0; padding: 0; list-style: none; font-size: 0.75rem; color: #666; }
+.evercnc-dot { display: inline-block; width: 1.6rem; height: 0.7rem; margin-right: 0.4rem; border-radius: 1rem; vertical-align: middle; border: 1px solid transparent; }
+.evercnc-dot--available { background: var(--evercnc-primary-soft); border-color: var(--evercnc-primary); }
+.evercnc-dot--selected { background: var(--evercnc-primary); }
+.evercnc-dot--full { background: var(--evercnc-full); }
+.evercnc-dot--past { background: var(--evercnc-past); }
+.evercnc-summary { margin-top: 1rem; padding: 0.6rem 0.8rem; border-left: 3px solid var(--evercnc-primary); background: #f8f8f8; font-size: 0.85rem; }
+.evercnc-summary__empty { color: #888; margin-left: 0.25rem; }
+.evercnc-summary__list { margin: 0.25rem 0 0; padding-left: 1.1rem; }
+.evercnc-summary__day { font-weight: 600; }
+.evercnc-summary__hint { margin: 0.4rem 0 0; color: #888; font-size: 0.75rem; }
 .evercnc-warning { margin-top: 0.75rem; }
+.evercnc-msg--below { margin-top: 0.75rem; padding: 0.6rem 0.8rem; border-radius: 4px; background: #fff8e5; border: 1px solid #f3e2b3; font-size: 0.85rem; }
+
+@media (max-width: 575px) {
+	.evercnc-slot > span { min-width: 0; }
+	.evercnc-slots { display: grid; grid-template-columns: 1fr 1fr; }
+	.evercnc-slots--periods { grid-template-columns: 1fr; }
+}

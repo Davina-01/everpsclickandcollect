@@ -20,16 +20,16 @@
      data-evercnccarrier="{$everclickncollect_id|escape:'htmlall':'UTF-8'}"
      data-maxselected="{$max_selected|intval}"
      data-msg-max="{l s='You can choose up to %d time slots.' sprintf=[$max_selected|intval] mod='everpsclickandcollect'}">
-	{if isset($custom_msg) && $custom_msg}
-	<div id="everclickncollect_msg" class="evercnc-msg">
-		{$custom_msg nofilter}
-	</div>
+
+	{if !$ask_date && isset($custom_msg) && $custom_msg}
+	<div class="evercnc-msg">{$custom_msg nofilter}</div>
 	{/if}
 
-	{foreach from=$stores item=store}
-	{assign var=sid value=$store.id_store|intval}
-	<div class="evercnc-store{if $store.selected} evercnc-store--active{/if}" data-idstore="{$sid}">
-		<label class="evercnc-store__head">
+	<p class="evercnc-title">{l s='Please choose a pickup location' mod='everpsclickandcollect'}</p>
+	<div class="evercnc-stores">
+		{foreach from=$stores item=store}
+		{assign var=sid value=$store.id_store|intval}
+		<label class="evercnc-store{if $store.selected} evercnc-store--active{/if}" data-idstore="{$sid}">
 			{if $only_one}
 				<input type="hidden" name="everpsclickandcollect" value="{$sid}">
 			{else}
@@ -39,49 +39,91 @@
 				<img class="evercnc-store__img" src="{$store.image.bySize.stores_default.url|escape:'htmlall':'UTF-8'}" alt="{$store.image.legend|escape:'htmlall':'UTF-8'}">
 			{/if}
 			<span class="evercnc-store__info">
-				<strong>{$store.name|escape:'htmlall':'UTF-8'}</strong><br>
-				<small>{$store.address.formatted nofilter}</small>
+				<strong>{$store.name|escape:'htmlall':'UTF-8'}</strong>
+				<small>{$store.address.formatted|replace:'<br />':', ' nofilter}</small>
 			</span>
 		</label>
+		{/foreach}
+	</div>
 
-		{if $ask_date}
-		<div class="evercnc-booking"{if !$store.selected} style="display:none"{/if}>
-			{if !$store.pickup_days}
-				<p class="alert alert-warning">{l s='No pickup time slot is available for this store at the moment.' mod='everpsclickandcollect'}</p>
-			{else}
-				{assign var=current_date value=''}
-				{foreach from=$store.pickup_days item=day}
-					{if $store.selected && $day.date == $selected_date}{assign var=current_date value=$day.date}{/if}
-				{/foreach}
-				{if !$current_date}{assign var=current_date value=$store.pickup_days[0].date}{/if}
-
-				<label class="evercnc-label" for="evercnc_date_{$sid}">{l s='Pickup date' mod='everpsclickandcollect'}</label>
-				<select class="form-control evercnc-date" id="evercnc_date_{$sid}" name="evercnc_date[{$sid}]">
-					{foreach from=$store.pickup_days item=day}
-					<option value="{$day.date|escape:'htmlall':'UTF-8'}" {if $day.date == $current_date}selected{/if}>{$day.label|escape:'htmlall':'UTF-8'}</option>
-					{/foreach}
-				</select>
-
-				<p class="evercnc-label">{l s='Pickup time (you can select several slots)' mod='everpsclickandcollect'}</p>
-				{foreach from=$store.pickup_days item=day}
-				<div class="evercnc-slots" data-date="{$day.date|escape:'htmlall':'UTF-8'}"{if $day.date != $current_date} style="display:none"{/if}>
+	{if $ask_date}
+	{foreach from=$stores item=store}
+	{assign var=sid value=$store.id_store|intval}
+	<div class="evercnc-booking" data-idstore="{$sid}"{if !$store.selected} hidden{/if}>
+		<p class="evercnc-title">{l s='Please choose date and time to pick up' mod='everpsclickandcollect'}</p>
+		{if !$store.pickup_days}
+			<p class="alert alert-warning">{l s='No pickup time slot is available for this store at the moment.' mod='everpsclickandcollect'}</p>
+		{else}
+			{* Open the first day that already has a selection, else the first day *}
+			{assign var=active_date value=$store.pickup_days[0].date}
+			{assign var=found value=false}
+			{foreach from=$store.pickup_days item=day}
+				{if !$found && $store.selected}
 					{foreach from=$day.slots item=slot}
-					<label class="evercnc-slot{if $slot.full} evercnc-slot--full{/if}">
+						{assign var=entry_key value="`$day.date`|`$slot.value`"}
+						{if !$found && isset($selected_entries[$entry_key])}{assign var=active_date value=$day.date}{assign var=found value=true}{/if}
+					{/foreach}
+				{/if}
+			{/foreach}
+
+			<div class="evercnc-tabs">
+				<button type="button" class="evercnc-tabs__arrow" data-dir="-1" aria-label="{l s='Previous days' mod='everpsclickandcollect'}">&lsaquo;</button>
+				<div class="evercnc-tabs__list" role="tablist">
+					{foreach from=$store.pickup_days item=day}
+					<button type="button" role="tab" class="evercnc-tab{if $day.date == $active_date} evercnc-tab--active{/if}"
+						data-date="{$day.date|escape:'htmlall':'UTF-8'}" aria-selected="{if $day.date == $active_date}true{else}false{/if}">
+						<span class="evercnc-tab__day">{$day.weekday|escape:'htmlall':'UTF-8'}</span>
+						<span class="evercnc-tab__date">{$day.short|escape:'htmlall':'UTF-8'}</span>
+						<span class="evercnc-tab__badge" hidden></span>
+					</button>
+					{/foreach}
+				</div>
+				<button type="button" class="evercnc-tabs__arrow" data-dir="1" aria-label="{l s='Next days' mod='everpsclickandcollect'}">&rsaquo;</button>
+			</div>
+
+			{foreach from=$store.pickup_days item=day}
+			<div class="evercnc-panel" role="tabpanel" data-date="{$day.date|escape:'htmlall':'UTF-8'}"
+				data-daylabel="{$day.label|escape:'htmlall':'UTF-8'}"{if $day.date != $active_date} hidden{/if}>
+				<div class="evercnc-slots{if $period_mode} evercnc-slots--periods{/if}">
+					{foreach from=$day.slots item=slot}
+					{assign var=entry_key value="`$day.date`|`$slot.value`"}
+					<label class="evercnc-slot{if $slot.past} evercnc-slot--past{elseif $slot.full} evercnc-slot--full{/if}">
 						<input type="checkbox"
 							name="evercnc_slots[{$sid}][]"
-							value="{$slot.value|escape:'htmlall':'UTF-8'}"
-							{if $slot.full || $day.date != $current_date}disabled{/if}
-							{if $slot.full}data-full="1"{/if}
-							{if $store.selected && $day.date == $selected_date && isset($selected_slots[$slot.value])}checked{/if}>
-						<span><span class="evercnc-slot__time">{$slot.label|escape:'htmlall':'UTF-8'}</span>{if $slot.full} <em>{l s='full' mod='everpsclickandcollect'}</em>{/if}</span>
+							value="{$entry_key|escape:'htmlall':'UTF-8'}"
+							data-label="{if $slot.name}{$slot.name|escape:'htmlall':'UTF-8'} {/if}{$slot.label|escape:'htmlall':'UTF-8'}"
+							{if $slot.full || $slot.past}disabled{/if}
+							{if $store.selected && !$slot.full && !$slot.past && isset($selected_entries[$entry_key])}checked{/if}>
+						<span>
+							{if $slot.name}<strong class="evercnc-slot__name">{$slot.name|escape:'htmlall':'UTF-8'}</strong>{/if}
+							<span class="evercnc-slot__time">{$slot.label|escape:'htmlall':'UTF-8'}</span>
+						</span>
 					</label>
 					{/foreach}
 				</div>
-				{/foreach}
-				<p class="evercnc-warning alert alert-danger" style="display:none"></p>
-			{/if}
-		</div>
+			</div>
+			{/foreach}
+
+			<ul class="evercnc-legend">
+				<li><i class="evercnc-dot evercnc-dot--available"></i>{l s='Available' mod='everpsclickandcollect'}</li>
+				<li><i class="evercnc-dot evercnc-dot--selected"></i>{l s='Selected' mod='everpsclickandcollect'}</li>
+				<li><i class="evercnc-dot evercnc-dot--full"></i>{l s='Full' mod='everpsclickandcollect'}</li>
+				<li><i class="evercnc-dot evercnc-dot--past"></i>{l s='Not available' mod='everpsclickandcollect'}</li>
+			</ul>
+
+			<div class="evercnc-summary">
+				<strong>{l s='Your pickup time:' mod='everpsclickandcollect'}</strong>
+				<span class="evercnc-summary__empty">{l s='No time slot selected yet.' mod='everpsclickandcollect'}</span>
+				<ul class="evercnc-summary__list"></ul>
+				<p class="evercnc-summary__hint">{l s='You can select slots on several days, for example today afternoon and tomorrow morning.' mod='everpsclickandcollect'}</p>
+			</div>
+			<p class="evercnc-warning alert alert-danger" hidden></p>
+		{/if}
+
+		{if isset($custom_msg) && $custom_msg}
+		<div class="evercnc-msg evercnc-msg--below">{$custom_msg nofilter}</div>
 		{/if}
 	</div>
 	{/foreach}
+	{/if}
 </div>
