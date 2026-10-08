@@ -170,3 +170,5 @@
 .evercnc-notes p { margin: 0 0 0.3rem; font-size: inherit; line-height: inherit; color: inherit; }
 .evercnc-notes .evercnc-notes__title { font-weight: 600; margin-bottom: 0.2rem; }
 .evercnc-notes a, .evercnc-alert a { color: var(--evercnc-primary); font-weight: 600; text-decoration: underline; }
+/* Keep the native dropdown arrow in Bootstrap 5 themes (Hummingbird), where .form-control hides it */
+.evercnc .evercnc-period select.form-control { -webkit-appearance: menulist; -moz-appearance: menulist; appearance: auto; background-image: none; padding-right: 0.25rem; }

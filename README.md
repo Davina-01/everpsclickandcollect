@@ -5,7 +5,7 @@ Click & collect (store pickup) carrier for PrestaShop 1.7 / 8, with a **pickup t
 > This is an unofficial fork of [TeamEver/everpsclickandcollect](https://github.com/TeamEver/everpsclickandcollect). It is not an official Team Ever release.
 > Original work © Team Ever, released under the [Academic Free License 3.0](LICENSE.md). The changes of this fork are released under the same license.
 
-Tested on **PrestaShop 8.2.0** (classic theme). Customer and back office texts: **French** (default) and **English**; languages without their own default texts get the French ones.
+Compatible with **PrestaShop 8 and 9**: tested on **8.2.0** (classic theme) and **9.2.0** (Hummingbird and classic themes), PHP 7.2 – 8.4. Customer and back office texts: **French** (default) and **English**; languages without their own default texts get the French ones.
 
 ---
 
@@ -111,6 +111,8 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 - Pickup choices are stored in `ps_everpsclickandcollect` (one row per cart): `pickup_mode` (`now` / `later`), `pickup_periods` (JSON), `pickup_prepare`, `pickup_summary`, plus the original `id_store`, `delivery_date`, `delivery_hour` columns.
 - Hooks: `displayCarrierExtraContent`, `actionValidateStepComplete` (blocks "Continue"), `displayOrderConfirmation`, `displayAdminOrderMain`, `displayPDFDeliverySlip`, `actionEmailSendBefore`, `actionOrderGridDefinitionModifier`, `actionOrderGridQueryBuilderModifier`.
 - A hidden back office controller (`AdminEverPsClickAndCollectPickup`) saves the pickup time changed by the staff.
+- PrestaShop 9 bundles theme CSS in a cache: after updating the module, clear the cache (Advanced parameters → Performance → Clear cache) so the new styles are used.
+- The per-store stock field of the original module uses the old product page hook (`displayAdminProductsQuantitiesStepBottom`), which the new product page of PrestaShop 8.1+ and PrestaShop 9 no longer displays. Store stock can still be imported / exported as CSV.
 - Orders saved by 3.2.0 / 3.3.0 (time slots) are still displayed.
 
 ### Changelog
