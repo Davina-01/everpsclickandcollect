@@ -54,7 +54,7 @@
                     <label class="mr-3"><input type="radio" name="evercnc_mode" value="now"{if $pickup_edit_mode == 'now'} checked{/if}> A · {l s='Pick up now' mod='everpsclickandcollect'}</label>
                     <label><input type="radio" name="evercnc_mode" value="later"{if $pickup_edit_mode != 'now'} checked{/if}> B · {l s='Pick up later' mod='everpsclickandcollect'}</label>
                 </div>
-                <p class="text-muted small mb-2">{l s='For "Pick up later": up to 3 time periods, leave a line empty to remove it.' mod='everpsclickandcollect'}</p>
+                <p class="text-muted small mb-2">{l s='For "Pick up later": 1 to 3 time periods, leave a line empty to remove it.' mod='everpsclickandcollect'}</p>
                 {foreach from=$pickup_edit_periods item=p key=i}
                 <div class="form-inline mb-2">
                     <input type="date" class="form-control mr-2" name="evercnc_periods[{$i|intval}][date]" value="{$p.date|escape:'htmlall':'UTF-8'}">

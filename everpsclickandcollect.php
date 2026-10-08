@@ -160,7 +160,7 @@ class Everpsclickandcollect extends CarrierModule
     /**
      * Default customer messages, in display order.
      * NOTE, T2, T3, T1: small notes below the pickup time (title, then notes, T1 last).
-     * T5, T6: "we may not prepare in advance" warnings.
+     * T6: "we may not prepare in advance" warning (time range too wide).
      * Variables: {latest} (latest pickup time of the week), {closing}, {now_limit}, {whatsapp} (WhatsApp link)
      */
     public function getDefaultTexts()
@@ -181,10 +181,6 @@ class Everpsclickandcollect extends CarrierModule
             'T1' => array(
                 'fr' => 'Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l\'avance sur {whatsapp} : un collègue restera au magasin pour vous attendre.',
                 'en' => 'To pick up between {latest} and {closing}, choose {latest} and let us know in advance on {whatsapp}: a colleague will stay in the shop for you.',
-            ),
-            'T5' => array(
-                'fr' => 'Vous n\'avez pas indiqué d\'heure d\'arrivée : nous ne préparerons peut-être pas votre commande à l\'avance. Merci de votre compréhension.',
-                'en' => 'You have not chosen an arrival time: we may not prepare your order in advance. Thank you for your understanding.',
             ),
             'T6' => array(
                 'fr' => 'La plage horaire choisie est large : nous ne préparerons peut-être pas votre commande à l\'avance. Merci de votre compréhension.',
@@ -898,7 +894,6 @@ class Everpsclickandcollect extends CarrierModule
             'T2' => $this->l('Note below the title (all customers)'),
             'T3' => $this->l('Second note (all customers)'),
             'T1' => $this->l('Last note (all customers)'),
-            'T5' => $this->l('Warning box: customer chose "Pick up later" without any time'),
             'T6' => $this->l('Warning box: time range too wide (dates too far apart or total time too long)'),
         );
     }
@@ -1314,7 +1309,7 @@ class Everpsclickandcollect extends CarrierModule
         foreach ($P::getBookableDates($settings, $now) as $date) {
             $ranges = $P::getDayRanges($date, $settings);
             $default = $P::defaultPeriod($date, $settings, $now);
-            $dates[] = array('value' => $date, 'label' => $this->formatPickupDate($date, $idLang));
+            $dates[] = array('value' => $date, 'label' => $this->getPickupDayLabel($date, $idLang, $now));
             $days[$date] = array('ranges' => $ranges, 'start' => $default['start'], 'end' => $default['end']);
             $minHour = min($minHour, intdiv($ranges[0][0], 60));
             $maxHour = max($maxHour, intdiv($ranges[count($ranges) - 1][1], 60));
@@ -1347,15 +1342,10 @@ class Everpsclickandcollect extends CarrierModule
                 }
             }
         }
-        if (!$periods) {
-            if (!$chosen && $dates) {
-                // Not chosen yet: today (or the first pickup day) from now to the end of the pickup hours
-                $first = $dates[0]['value'];
-                $periods[] = $toRow($first, $days[$first]['start'], $days[$first]['end']);
-            } else {
-                // The customer cleared the times: keep one empty line
-                $periods[] = $toRow($dates ? $dates[0]['value'] : '', null, null);
-            }
+        if (!$periods && $dates) {
+            // Today (or the first pickup day) from now to the end of the pickup hours
+            $first = $dates[0]['value'];
+            $periods[] = $toRow($first, $days[$first]['start'], $days[$first]['end']);
         }
 
         return array(
@@ -1431,6 +1421,21 @@ class Everpsclickandcollect extends CarrierModule
     }
 
     /**
+     * Checkout date label: "Aujourd'hui" / "Demain", else "ven. 9 oct."
+     */
+    public function getPickupDayLabel($date, $idLang, $now = null)
+    {
+        $now = $now === null ? time() : (int) $now;
+        if ($date === date('Y-m-d', $now)) {
+            return $this->l('Today');
+        }
+        if ($date === date('Y-m-d', strtotime('+1 day', strtotime(date('Y-m-d', $now) . ' 12:00:00')))) {
+            return $this->l('Tomorrow');
+        }
+        return $this->formatPickupDate($date, $idLang);
+    }
+
+    /**
      * "ven. 9 oct." (fr), "Fri 9 Oct" (en)
      */
     public function formatPickupDate($date, $idLang = null)
@@ -1502,6 +1507,10 @@ class Everpsclickandcollect extends CarrierModule
         }
         $raw = isset($request['evercnc_periods']) ? $request['evercnc_periods'] : array();
         list($valid, $error) = $P::validatePeriods($P::readPeriods($raw), $settings, true);
+        if (!$error && !$valid) {
+            // An empty time would mean "any time": at least one period is required
+            $error = 'no_period';
+        }
         if ($error) {
             $this->addCheckoutError($this->getPeriodErrorMessage($error));
             $params['completed'] = false;
@@ -1515,6 +1524,8 @@ class Everpsclickandcollect extends CarrierModule
         switch ($code) {
             case 'too_many':
                 return sprintf($this->l('You can add up to %d time periods.'), EverpsclickandcollectPickup::MAX_PERIODS);
+            case 'no_period':
+                return $this->l('Please choose when you might come.');
             case 'incomplete':
                 return $this->l('Please complete the start and end time of each time period, or leave it empty.');
             case 'end_before_start':

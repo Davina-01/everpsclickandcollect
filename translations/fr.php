@@ -299,3 +299,8 @@ $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_80538692e72b5
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_87036278bc2d05259718a16a5367c655'] = 'ex. https://wa.me/33612345678. Affiché comme lien « WhatsApp » là où les textes contiennent {whatsapp}';
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_76f7c3d55be929caf16bcdc04002481b'] = 'Choix sélectionnés, boutons et liens (par défaut #1b82d6)';
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_71d5351c4ca2f8537146f9788d1fbae0'] = 'Deuxième note (tous les clients)';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_1dd1c5fb7f25cd41b291d43a89e3aefd'] = 'Aujourd\'hui';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_ff9eb8bd8c927da073cea632f294e23b'] = 'Demain';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_a1ae30e84c142c4e6930950810c8e5f1'] = 'Veuillez indiquer quand vous pourriez venir.';
+$_MODULE['<{everpsclickandcollect}prestashop>extra_carrier_b70b0d6d5a04faf94aac04375c719a9c'] = 'Quand pourriez-vous venir ? (jusqu\'à 3 plages horaires)';
+$_MODULE['<{everpsclickandcollect}prestashop>admin_order_a1dcc95d92417e9e4ad7a8eb7171ca6a'] = 'Pour « Retrait plus tard » : 1 à 3 plages horaires, laissez une ligne vide pour la supprimer.';

@@ -58,6 +58,9 @@ class AdminEverPsClickAndCollectPickupController extends ModuleAdminController
                 $P::getSettings(),
                 false
             );
+            if (!$error && !$valid) {
+                $error = 'no_period';
+            }
             if ($error) {
                 Tools::redirectAdmin($back . '&evercnc_error=' . urlencode($error) . '#evercnc-pickup');
             }

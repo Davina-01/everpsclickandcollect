@@ -21,13 +21,12 @@ Tested on **PrestaShop 8.2.0** (classic theme). Customer and back office texts: 
      - **+ Add another time you might come** adds the next pickup day, with its whole pickup hours;
      - changing the date keeps the times when they are still possible that day, otherwise takes that day's default times;
      - hour and minute pickers (wheel on phones, typing on computers); only pickup hours can be chosen, past times are disabled;
-     - the customer can clear the times (no time given);
+     - times cannot be left empty (an empty time would mean "any time");
+     - today and tomorrow are shown as **Today / Tomorrow** (*Aujourd'hui / Demain*), other days as `ven. 9 oct.`;
      - overlapping or touching periods of the same day are merged (`14:00–16:00` + `15:00–17:00` → `14:00–17:00`).
-3. **Warning box** (rounded box) when the order will probably **not be prepared in advance**:
-   - **T5** – "Pick up later" without any time;
-   - **T6** – time range too wide (see *Prepare on arrival* below).
+3. **Warning box T6** (rounded box) when the time range is too wide and the order will probably **not be prepared in advance** (see *Prepare on arrival* below).
 4. **Small notes** below the pickup time, for every customer (title, then **T2**, **T3**, and **T1** last). A `{whatsapp}` variable shows a clickable WhatsApp link.
-5. Pressing **Continue** checks everything again on the server: no choice, incomplete period, past time, time outside the pickup hours… are refused with a clear message.
+5. Pressing **Continue** checks everything again on the server: no choice, no period, past time, time outside the pickup hours… are refused with a clear message.
 
 ### Prepare on arrival
 
@@ -35,11 +34,10 @@ Tested on **PrestaShop 8.2.0** (classic theme). Customer and back office texts: 
 
 | Rule | Default | Example |
 |---|---|---|
-| No period given | always on | — |
 | First and last dates more than *N* days apart | on, N = 1 | Thu + Fri → prepared · Thu + Sat → prepare on arrival |
 | Total time of the merged periods longer than *N* hours | on, N = 6 | 12:00–18:00 → prepared · 10:30–19:00 → prepare on arrival |
 
-The two last rules can be switched off. The customer sees the matching warning box (T5 / T6) while choosing.
+Both rules can be switched off. The customer sees the warning box T6 while choosing.
 
 ### Back office
 
@@ -90,7 +88,7 @@ The two last rules can be switched off. The customer sees the matching warning b
 | Main color | `#1b82d6` | Selected choices, buttons, links |
 | Warning box color | `#e8a33d` | Border of the warning box, background is a light shade |
 | Notes text color | `#5f6f82` | Small notes |
-| Texts NOTE, T2, T3, T1, T5, T6 | see below | Editable per language (French by default), each can be switched off |
+| Texts NOTE, T2, T3, T1, T6 | see below | Editable per language (French by default), each can be switched off |
 
 Checks when saving: valid ranges without overlap, minutes on the minute step, closing time not earlier than the latest pickup time, valid exception lines, colors `#rrggbb`, WhatsApp link as a full address. A warning is shown when the maximum total time is longer than a day of pickup hours (the rule can then only apply to several days).
 
@@ -102,7 +100,6 @@ Checks when saving: valid ranges without overlap, minutes on the minute step, cl
 | T2 | Note | L'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée. |
 | T3 | Note | Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d'horaire, laissez-nous un message sur {whatsapp}. |
 | T1 | Last note | Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l'avance sur {whatsapp} : un collègue restera au magasin pour vous attendre. |
-| T5 | Warning box, no time given | Vous n'avez pas indiqué d'heure d'arrivée : nous ne préparerons peut-être pas votre commande à l'avance. Merci de votre compréhension. |
 | T6 | Warning box, time range too wide | La plage horaire choisie est large : nous ne préparerons peut-être pas votre commande à l'avance. Merci de votre compréhension. |
 
 Variables: `{latest}` latest pickup time of the week · `{closing}` closing time · `{now_limit}` "Pick up now" time limit · `{whatsapp}` WhatsApp link.

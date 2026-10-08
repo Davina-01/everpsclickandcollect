@@ -3,7 +3,7 @@
  *
  * A. "Pick up now"
  * B. "Pick up later" with up to 3 optional periods "date HH:MM - HH:MM"
- * Warnings T5 / T6 follow the customer's choice live; the same rules are checked
+ * Warning T6 follows the customer's choice live; the same rules are checked
  * again on the server when the customer presses "Continue".
  *
  *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
@@ -113,8 +113,14 @@
 			});
 			this.disabled = !ok;
 		});
-		if ($hour.val() !== '' && $hour.find('option:selected').prop('disabled')) {
-			$hour.val('');
+		var firstEnabled = function ($select) {
+			return $select.find('option').filter(function () {
+				return !this.disabled;
+			}).first().val();
+		};
+		// Times cannot be empty: an impossible hour moves to the first possible one
+		if (!$hour.val() || $hour.find('option:selected').prop('disabled')) {
+			$hour.val(firstEnabled($hour));
 		}
 		var hour = $hour.val();
 		$minute.find('option').each(function () {
@@ -123,17 +129,8 @@
 			}
 			this.disabled = hour !== '' && hour !== null && !isValid(parseInt(hour, 10) * 60 + parseInt(this.value, 10));
 		});
-		if ($minute.val() !== '' && $minute.find('option:selected').prop('disabled')) {
-			$minute.val('');
-		}
-		// Hour chosen first: take the first possible minute
-		if (hour !== '' && hour !== null && ($minute.val() === '' || $minute.val() === null)) {
-			var $first = $minute.find('option').filter(function () {
-				return this.value !== '' && !this.disabled;
-			}).first();
-			if ($first.length) {
-				$minute.val($first.val());
-			}
+		if (!$minute.val() || $minute.find('option:selected').prop('disabled')) {
+			$minute.val(firstEnabled($minute));
 		}
 	}
 
@@ -236,7 +233,6 @@
 				wide = true;
 			}
 		}
-		$booking.find('[data-tip="T5"]').prop('hidden', !(mode === 'later' && empty));
 		$booking.find('[data-tip="T6"]').prop('hidden', !(mode === 'later' && wide));
 
 		var visible = $booking.find('.evercnc-period:not([hidden])').length;

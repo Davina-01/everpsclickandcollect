@@ -71,7 +71,7 @@
 			{if !$pickup_dates}
 				<p class="alert alert-warning">{l s='No pickup date is available at the moment.' mod='everpsclickandcollect'}</p>
 			{else}
-			<p class="evercnc-label">{l s='When might you come? (optional, up to 3 time periods)' mod='everpsclickandcollect'}</p>
+			<p class="evercnc-label">{l s='When might you come? (up to 3 time periods)' mod='everpsclickandcollect'}</p>
 			<div class="evercnc-periods">
 				{section name=row loop=$pickup_max_periods}
 				{assign var=idx value=$smarty.section.row.index}
@@ -84,20 +84,16 @@
 					</select>
 					<span class="evercnc-time">
 						<select class="form-control evercnc-p-h" data-part="sh" name="evercnc_periods[{$idx}][sh]" aria-label="{l s='From (hour)' mod='everpsclickandcollect'}"{if !$shown} disabled{/if}>
-							<option value="">--</option>
 							{foreach from=$pickup_hours item=h}<option value="{$h|intval}"{if $p.sh !== '' && $p.sh == $h} selected{/if}>{$h|string_format:'%02d'}</option>{/foreach}
 						</select><span class="evercnc-colon">:</span><select class="form-control evercnc-p-m" data-part="sm" name="evercnc_periods[{$idx}][sm]" aria-label="{l s='From (minutes)' mod='everpsclickandcollect'}"{if !$shown} disabled{/if}>
-							<option value="">--</option>
 							{foreach from=$pickup_minutes item=m}{assign var=mm value=$m|string_format:'%02d'}<option value="{$mm}"{if $p.sm === $mm} selected{/if}>{$mm}</option>{/foreach}
 						</select>
 					</span>
 					<span class="evercnc-sep">–</span>
 					<span class="evercnc-time">
 						<select class="form-control evercnc-p-h" data-part="eh" name="evercnc_periods[{$idx}][eh]" aria-label="{l s='To (hour)' mod='everpsclickandcollect'}"{if !$shown} disabled{/if}>
-							<option value="">--</option>
 							{foreach from=$pickup_hours item=h}<option value="{$h|intval}"{if $p.eh !== '' && $p.eh == $h} selected{/if}>{$h|string_format:'%02d'}</option>{/foreach}
 						</select><span class="evercnc-colon">:</span><select class="form-control evercnc-p-m" data-part="em" name="evercnc_periods[{$idx}][em]" aria-label="{l s='To (minutes)' mod='everpsclickandcollect'}"{if !$shown} disabled{/if}>
-							<option value="">--</option>
 							{foreach from=$pickup_minutes item=m}{assign var=mm value=$m|string_format:'%02d'}<option value="{$mm}"{if $p.em === $mm} selected{/if}>{$mm}</option>{/foreach}
 						</select>
 					</span>
@@ -109,9 +105,6 @@
 			</div>
 			<button type="button" class="evercnc-add">+ {l s='Add another time you might come' mod='everpsclickandcollect'}</button>
 			<p class="evercnc-error alert alert-danger" hidden></p>
-			{if $pickup_texts.T5}
-			<div class="evercnc-alert" role="status" data-tip="T5" hidden>{$pickup_texts.T5 nofilter}</div>
-			{/if}
 			{if $pickup_texts.T6}
 			<div class="evercnc-alert" role="status" data-tip="T6" hidden>{$pickup_texts.T6 nofilter}</div>
 			{/if}

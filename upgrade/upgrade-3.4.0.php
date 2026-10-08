@@ -74,8 +74,8 @@ function upgrade_module_3_4_0($module)
         Configuration::deleteByName($key);
     }
 
-    // T4 does not exist anymore
-    foreach (array('T4') as $code) {
+    // T4 and T5 do not exist anymore (times cannot be left empty)
+    foreach (array('T4', 'T5') as $code) {
         Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code);
         Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON');
     }
