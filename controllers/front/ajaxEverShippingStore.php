@@ -68,7 +68,13 @@ class EverpsclickandcollectAjaxEverShippingStoreModuleFrontController extends Mo
                 $mode = '';
             }
         }
-        $this->module->savePickupChoice((int) $cart->id, $idStore, $mode, $merged);
+        $this->module->savePickupChoice(
+            (int) $cart->id,
+            $idStore,
+            $mode,
+            $merged,
+            (string) Tools::getValue('evercnc_by')
+        );
         $this->context->cookie->__set('everclickncollect_id', $idStore);
         $this->ajaxRender(json_encode(array(
             'return' => true,

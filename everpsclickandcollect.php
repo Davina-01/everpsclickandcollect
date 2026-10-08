@@ -1296,6 +1296,7 @@ class Everpsclickandcollect extends CarrierModule
         }
 
         return array(
+            'pickup_by' => $current && $current['pickup_by'] ? $current['pickup_by'] : $P::BY_SELF,
             'pickup_mode' => $mode,
             'pickup_periods' => array_slice($periods, 0, $P::MAX_PERIODS),
             'pickup_dates' => $dates,
@@ -1396,6 +1397,7 @@ class Everpsclickandcollect extends CarrierModule
             return;
         }
         $settings = $P::getSettings();
+        $collector = $P::readCollector(isset($request['evercnc_by']) ? (string) $request['evercnc_by'] : '');
         $mode = isset($request['evercnc_mode']) ? (string) $request['evercnc_mode'] : '';
         if ($mode === $P::MODE_NOW) {
             if (!$P::isNowAvailable($settings)) {
@@ -1403,7 +1405,7 @@ class Everpsclickandcollect extends CarrierModule
                 $params['completed'] = false;
                 return;
             }
-            $this->savePickupChoice((int) $cart->id, $idStore, $P::MODE_NOW, array());
+            $this->savePickupChoice((int) $cart->id, $idStore, $P::MODE_NOW, array(), $collector);
             return;
         }
         if ($mode !== $P::MODE_LATER) {
@@ -1418,7 +1420,7 @@ class Everpsclickandcollect extends CarrierModule
             $params['completed'] = false;
             return;
         }
-        $this->savePickupChoice((int) $cart->id, $idStore, $P::MODE_LATER, $P::mergePeriods($valid));
+        $this->savePickupChoice((int) $cart->id, $idStore, $P::MODE_LATER, $P::mergePeriods($valid), $collector);
     }
 
     public function getPeriodErrorMessage($code)
@@ -1491,7 +1493,7 @@ class Everpsclickandcollect extends CarrierModule
      * @param string $mode '' (store only), 'now' or 'later'
      * @param array $merged periods from EverpsclickandcollectPickup::mergePeriods()
      */
-    public function savePickupChoice($idCart, $idStore, $mode, array $merged)
+    public function savePickupChoice($idCart, $idStore, $mode, array $merged, $collector = null)
     {
         if (!(int) $idCart) {
             return false;
@@ -1506,6 +1508,7 @@ class Everpsclickandcollect extends CarrierModule
             'pickup_periods' => null,
             'pickup_prepare' => null,
             'pickup_summary' => null,
+            'pickup_by' => $collector === null ? null : pSQL(EverpsclickandcollectPickup::readCollector($collector)),
         );
         if (in_array($mode, array($P::MODE_NOW, $P::MODE_LATER), true)) {
             $evaluation = $P::evaluate($mode, $merged, $P::getSettings());
@@ -1565,7 +1568,7 @@ class Everpsclickandcollect extends CarrierModule
     public function getPickupInfo($row, $idLang = null, $orderDate = null)
     {
         $P = 'EverpsclickandcollectPickup';
-        $info = array('mode' => '', 'title' => '', 'lines' => array(), 'prepare' => true, 'text' => '', 'admin_text' => '');
+        $info = array('mode' => '', 'title' => '', 'lines' => array(), 'prepare' => true, 'text' => '', 'admin_text' => '', 'by' => '');
         if (!$row) {
             return $info;
         }
@@ -1593,8 +1596,15 @@ class Everpsclickandcollect extends CarrierModule
                 }
                 $letter = 'B';
             }
-            $info['text'] = $info['title'] . ($info['lines'] ? ' : ' . implode(' / ', $info['lines']) : '');
-            $info['admin_text'] = $letter . ' · ' . ($letter === 'A' ? $info['title'] . ($info['lines'] ? ' · ' . $info['lines'][0] : '') : implode(' / ', $info['lines']))
+            if (!empty($row['pickup_by'])) {
+                $info['by'] = $row['pickup_by'] === $P::BY_COURIER
+                    ? $this->translateIn('A courier', $idLang)
+                    : $this->translateIn('Me or someone I know', $idLang);
+            }
+            $info['text'] = $info['title'] . ($info['lines'] ? ' : ' . implode(' / ', $info['lines']) : '')
+                . ($info['by'] ? ' (' . $this->translateIn('Collected by:', $idLang) . ' ' . $info['by'] . ')' : '');
+            $info['admin_text'] = ($row['pickup_by'] === $P::BY_COURIER ? $this->translateIn('Courier', $idLang) . ' · ' : '')
+                . $letter . ' · ' . ($letter === 'A' ? $info['title'] . ($info['lines'] ? ' · ' . $info['lines'][0] : '') : implode(' / ', $info['lines']))
                 . ($info['prepare'] ? '' : ' · ' . $this->translateIn('Prepare on arrival', $idLang));
             return $info;
         }
@@ -1969,6 +1979,7 @@ class Everpsclickandcollect extends CarrierModule
         $this->context->smarty->assign(array(
             'pickup_edit_url' => $this->context->link->getAdminLink('AdminEverPsClickAndCollectPickup', true, array(), array('id_order' => (int) $order->id)),
             'pickup_edit_mode' => $row && $row['pickup_mode'] ? $row['pickup_mode'] : '',
+            'pickup_edit_by' => $row && $row['pickup_by'] ? $row['pickup_by'] : $P::BY_SELF,
             'pickup_edit_periods' => $periods,
             'pickup_times' => $times,
             'pickup_flash' => Tools::getValue('evercnc_saved') ? $this->l('Pickup time updated.') : '',
@@ -2039,11 +2050,13 @@ class Everpsclickandcollect extends CarrierModule
                     . ' WHEN \'now\' THEN CONCAT(\'A · \', :evercnc_now)'
                     . ' WHEN \'later\' THEN CONCAT(\'B · \', IF(IFNULL(evercnc.pickup_summary, \'\') = \'\', :evercnc_none, evercnc.pickup_summary))'
                     . ' ELSE ' . $legacy . ' END,'
-                    . ' IF(evercnc.pickup_prepare = 0, CONCAT(\' · \', :evercnc_flag), \'\')) AS evercnc_pickup'
+                    . ' IF(evercnc.pickup_prepare = 0, CONCAT(\' · \', :evercnc_flag), \'\'),'
+                    . ' IF(evercnc.pickup_by = \'courier\', CONCAT(\' · \', :evercnc_courier), \'\')) AS evercnc_pickup'
                 )
                     ->setParameter('evercnc_now', $this->l('Pick up now'))
                     ->setParameter('evercnc_none', $this->l('No time given'))
-                    ->setParameter('evercnc_flag', $this->l('Prepare on arrival'));
+                    ->setParameter('evercnc_flag', $this->l('Prepare on arrival'))
+                    ->setParameter('evercnc_courier', $this->l('Courier'));
             }
             if (isset($filters['evercnc_pickup']) && $filters['evercnc_pickup'] !== '') {
                 $qb->andWhere('evercnc.delivery_date LIKE :evercnc_pickup')

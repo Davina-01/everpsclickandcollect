@@ -272,6 +272,7 @@
 					ajax: true,
 					everclickncollect_id: idStore,
 					evercnc_mode: $booking.find('input[name="evercnc_mode"]:checked').val() || '',
+					evercnc_by: $booking.find('input[name="evercnc_by"]:checked').val() || 'self',
 					evercnc_periods: collect($booking)
 				}
 			});
@@ -292,7 +293,7 @@
 		save();
 	});
 
-	$(document).on('change', root + ' input[name="evercnc_mode"], ' + root + ' .evercnc-period select[data-part]', function () {
+	$(document).on('change', root + ' input[name="evercnc_mode"], ' + root + ' input[name="evercnc_by"], ' + root + ' .evercnc-period select[data-part]', function () {
 		evaluate($(this).closest('.evercnc-booking'));
 		save();
 	});

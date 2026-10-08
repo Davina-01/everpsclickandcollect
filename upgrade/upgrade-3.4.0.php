@@ -36,6 +36,7 @@ function upgrade_module_3_4_0($module)
         'pickup_periods' => 'text DEFAULT NULL',
         'pickup_prepare' => 'tinyint(1) DEFAULT NULL',
         'pickup_summary' => 'varchar(255) DEFAULT NULL',
+        'pickup_by' => 'varchar(10) DEFAULT NULL',
     );
     foreach ($columns as $name => $definition) {
         $exists = Db::getInstance()->executeS('SHOW COLUMNS FROM `' . $table . '` LIKE \'' . pSQL($name) . '\'');

@@ -275,3 +275,14 @@ $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_9cd699a614796
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_ec3194138cad0479814349d61f6c4414'] = 'Utilisée seulement dans le message T1 ({closing}), ex. 19:30. {latest} est l\'heure de retrait la plus tardive de la semaine';
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_4df86db1e44ba668a24c62a669c2a587'] = 'Horaires de retrait : %s';
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_6d741aed66b440a2960ad8ac1a05ef2a'] = 'ex. 10:30-19:00, ou 10:30-14:00, 16:00-19:00. Vide : pas de retrait ce jour-là. Indépendant des horaires d\'ouverture du magasin';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_e157641406676490534bb7717be648ca'] = 'Un coursier';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_8055096ec738543c6468e4f2ed26fda1'] = 'Moi ou un proche';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_23651dbbc2ae5a1fc610feea8266891f'] = 'Retrait par :';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_5055d1a4444c630d6839f48ab48aef91'] = 'Coursier';
+$_MODULE['<{everpsclickandcollect}prestashop>extra_carrier_ea2a1e9ea5ab40a5c7de3e39d89873a9'] = 'Qui vient retirer la commande ?';
+$_MODULE['<{everpsclickandcollect}prestashop>extra_carrier_8055096ec738543c6468e4f2ed26fda1'] = 'Moi ou un proche';
+$_MODULE['<{everpsclickandcollect}prestashop>extra_carrier_e157641406676490534bb7717be648ca'] = 'Un coursier';
+$_MODULE['<{everpsclickandcollect}prestashop>order_367d2781420e71cba25792536481d65b'] = 'Retrait par';
+$_MODULE['<{everpsclickandcollect}prestashop>admin_order_367d2781420e71cba25792536481d65b'] = 'Retrait par';
+$_MODULE['<{everpsclickandcollect}prestashop>admin_order_c26c2007b63873ae4e982df5392e3fc3'] = 'Client ou un proche';
+$_MODULE['<{everpsclickandcollect}prestashop>admin_order_5055d1a4444c630d6839f48ab48aef91'] = 'Coursier';

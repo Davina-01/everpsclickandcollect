@@ -33,6 +33,12 @@
                     <th>{l s='Store address' mod='everpsclickandcollect'}</th>
                     <td>{$store.address.formatted nofilter}</td>
                 </tr>
+                {if $pickup.by}
+                <tr>
+                    <th>{l s='Collected by' mod='everpsclickandcollect'}</th>
+                    <td>{$pickup.by|escape:'htmlall':'UTF-8'}</td>
+                </tr>
+                {/if}
                 {if $pickup.mode}
                 <tr>
                     <th>{l s='Pickup time' mod='everpsclickandcollect'}</th>
