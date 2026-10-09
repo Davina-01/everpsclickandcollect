@@ -26,6 +26,10 @@ require_once _PS_MODULE_DIR_.'everpsclickandcollect/models/Everpsclickandcollect
 require_once _PS_MODULE_DIR_.'everpsclickandcollect/models/EverpsclickandcollectStore.php';
 require_once _PS_MODULE_DIR_.'everpsclickandcollect/models/EverpsclickandcollectSlots.php';
 require_once _PS_MODULE_DIR_.'everpsclickandcollect/models/EverpsclickandcollectPickup.php';
+require_once _PS_MODULE_DIR_.'everpsclickandcollect/lifecycle/EverpsclickandcollectSchema.php';
+require_once _PS_MODULE_DIR_.'everpsclickandcollect/lifecycle/EverpsclickandcollectCarrierManager.php';
+require_once _PS_MODULE_DIR_.'everpsclickandcollect/lifecycle/EverpsclickandcollectMigrator.php';
+require_once _PS_MODULE_DIR_.'everpsclickandcollect/lifecycle/EverpsclickandcollectInstaller.php';
 
 class Everpsclickandcollect extends CarrierModule
 {
@@ -35,59 +39,135 @@ class Everpsclickandcollect extends CarrierModule
     private $postWarnings = array();
     public $siteUrl;
     public $isSeven;
+    /** @var bool true while PrestaShop's own install / uninstall code runs (it calls enable() / disable()) */
+    protected $lifecycleBusy = false;
 
     public function __construct()
     {
         $this->name = 'everpsclickandcollect';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.4.0';
+        $this->version = '3.4.1';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->bootstrap = true;
         parent::__construct();
         $this->displayName = $this->l('Ever PS Click And Collect');
         $this->description = $this->l('Click and Collect delivery method for Prestashop');
-        $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
+        $this->ps_versions_compliancy = array('min' => '8.0.0', 'max' => '9.99.99');
         $this->siteUrl = Tools::getHttpHost(true).__PS_BASE_URI__;
         $this->isSeven = Tools::version_compare(_PS_VERSION_, '1.7', '>=') ? true : false;
     }
 
     /**
-     * Don't forget to create update methods if needed:
-     * http://doc.prestashop.com/display/PS16/Enabling+the+Auto-Update
+     * Lifecycle (see lifecycle/EverpsclickandcollectInstaller.php):
+     * PrestaShop registers the module first, then every step is run (idempotent).
+     * If a step fails, the registration is rolled back so the install can simply be retried;
+     * tables, settings and carrier (deactivated) are kept and reused by the retry.
      */
     public function install()
     {
-        // Install SQL
-        include(dirname(__FILE__).'/sql/install.php');
-        $this->addCarrier();
+        $registered = $this->runCoreLifecycle(function () {
+            return parent::install();
+        });
+        if (!$registered) {
+            return false;
+        }
+        $installer = $this->getInstaller();
+        if ($installer->install()) {
+            return true;
+        }
+        $this->_errors = array_merge($this->_errors, $installer->getErrors());
+        // Roll back the registration only (hooks, back office pages, carrier deactivated): data is kept
+        $this->runCoreLifecycle(function () {
+            return parent::uninstall();
+        });
+        $installer->uninstall();
+        return false;
+    }
 
-        return parent::install() &&
-            // $this->installModuleTab(
-            //     'AdminEverPsClickAndCollect',
-            //     'AdminParentStores',
-            //     $this->l('Click & collect')
-            // ) &&
-            $this->registerHook('displayHeader') &&
-            $this->registerHook('displayBackOfficeHeader') &&
-            $this->registerHook('displayCarrierExtraContent') &&
-            $this->registerHook('displayOrderConfirmation') &&
-            $this->registerHook('displayAdminOrderMain') &&
-            $this->registerHook('displayPDFDeliverySlip') &&
-            $this->registerHook('actionValidateStepComplete') &&
-            $this->registerHook('actionOrderGridDefinitionModifier') &&
-            $this->registerHook('actionOrderGridQueryBuilderModifier') &&
-            $this->registerHook('actionEmailSendBefore') &&
-            $this->registerHook('actionUpdateQuantity') &&
-            $this->registerHook('actionCarrierUpdate') &&
-            $this->registerHook('displayAdminProductsQuantitiesStepBottom') &&
-            $this->registerHook('actionObjectProductUpdateAfter') &&
-            $this->registerHook('displayProductExtraContent') &&
-            $this->registerHook('actionObjectProductDeleteAfter') &&
-            $this->registerHook('actionOrderStatusUpdate') &&
-            $this->registerHook('actionValidateOrder') &&
-            $this->installSlotDefaults() &&
-            $this->installPickupTab();
+    /**
+     * Uninstall keeps the data: pickup choices of orders, store stock, settings and the carrier
+     * (deactivated, never deleted). Use "Delete all module data" on the configuration page to remove it.
+     */
+    public function uninstall()
+    {
+        $unregistered = $this->runCoreLifecycle(function () {
+            return parent::uninstall();
+        });
+        if (!$unregistered) {
+            return false;
+        }
+        $installer = $this->getInstaller();
+        if (!$installer->uninstall()) {
+            $this->_errors = array_merge($this->_errors, $installer->getErrors());
+        }
+        return true;
+    }
+
+    public function enable($force_all = false)
+    {
+        if (!parent::enable($force_all)) {
+            return false;
+        }
+        if ($this->lifecycleBusy) {
+            return true;
+        }
+        // Repairs a half installed module or an upgrade whose migrations did not run
+        $installer = $this->getInstaller();
+        if ($installer->onEnable()) {
+            return true;
+        }
+        $this->_errors = array_merge($this->_errors, $installer->getErrors());
+        parent::disable($force_all);
+        $installer->onDisable();
+        return false;
+    }
+
+    public function disable($force_all = false)
+    {
+        $result = parent::disable($force_all);
+        // A disabled module cannot ask for the store and pickup time: its carrier must not be offered
+        $this->getInstaller()->onDisable();
+        return $result;
+    }
+
+    /**
+     * DESTRUCTIVE: uninstalls the module and deletes all its data (pickup choices of all orders,
+     * store stock, store hours, settings). Carriers are soft deleted so orders keep their carrier.
+     * Only called from the confirmed "Delete all module data" action.
+     */
+    public function purgeData()
+    {
+        if (Module::isInstalled($this->name) && !$this->uninstall()) {
+            return false;
+        }
+        $installer = $this->getInstaller();
+        if ($installer->purge()) {
+            return true;
+        }
+        $this->_errors = array_merge($this->_errors, $installer->getErrors());
+        return false;
+    }
+
+    /**
+     * Runs PrestaShop's own install / uninstall, which call enable() / disable() themselves
+     */
+    protected function runCoreLifecycle(callable $call)
+    {
+        $this->lifecycleBusy = true;
+        try {
+            return $call();
+        } finally {
+            $this->lifecycleBusy = false;
+        }
+    }
+
+    /**
+     * @return EverpsclickandcollectInstaller
+     */
+    public function getInstaller()
+    {
+        return new EverpsclickandcollectInstaller($this);
     }
 
     /**
@@ -130,31 +210,20 @@ class Everpsclickandcollect extends CarrierModule
                 }
                 $values[(int) $lang['id_lang']] = $default;
             }
-            Configuration::updateValue($key, $values);
+            $changed = false;
+            foreach ($values as $idLang => $value) {
+                if (Configuration::get($key, (int) $idLang) !== $value) {
+                    $changed = true;
+                }
+            }
+            if ($changed) {
+                Configuration::updateValue($key, $values);
+            }
             if (Configuration::get($key . '_ON') === false) {
                 Configuration::updateValue($key . '_ON', 1);
             }
         }
         return true;
-    }
-
-    /**
-     * Hidden back office controller used to edit the pickup time of an order
-     */
-    public function installPickupTab()
-    {
-        if (Tab::getIdFromClassName('AdminEverPsClickAndCollectPickup')) {
-            return true;
-        }
-        $tab = new Tab();
-        $tab->active = 1;
-        $tab->class_name = 'AdminEverPsClickAndCollectPickup';
-        $tab->id_parent = -1;
-        $tab->module = $this->name;
-        foreach (Language::getLanguages(false) as $lang) {
-            $tab->name[(int) $lang['id_lang']] = 'Click & collect pickup';
-        }
-        return (bool) $tab->add();
     }
 
     /**
@@ -189,88 +258,35 @@ class Everpsclickandcollect extends CarrierModule
         );
     }
 
-    public function uninstall()
-    {
-        // Install SQL
-        include(dirname(__FILE__).'/sql/uninstall.php');
-        $carrier = new Carrier(
-            (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
-        );
-        $carrier->delete();
-        Configuration::deleteByName('EVERPSCLICKANDCOLLECT_CARRIER_ID');
-        $keys = array_merge(
-            array(
-                'EVERPSCLICKANDCOLLECT_ASK_DATE',
-                'EVERPSCLICKANDCOLLECT_SLOT_DURATION',
-                'EVERPSCLICKANDCOLLECT_LEAD_TIME',
-                'EVERPSCLICKANDCOLLECT_DAYS_AHEAD',
-                'EVERPSCLICKANDCOLLECT_SLOT_MAX',
-                'EVERPSCLICKANDCOLLECT_SLOT_MAX_SELECT',
-                'EVERPSCLICKANDCOLLECT_CLOSED_DATES',
-                'EVERPSCLICKANDCOLLECT_SLOT_MODE',
-            ),
-            array_keys(EverpsclickandcollectPickup::$defaults),
-            array(
-                'EVERPSCLICKANDCOLLECT_SCHEDULE',
-                'EVERPSCLICKANDCOLLECT_OPEN_DAYS',
-                'EVERPSCLICKANDCOLLECT_PICKUP_EARLIEST',
-                'EVERPSCLICKANDCOLLECT_PICKUP_LATEST',
-                'EVERPSCLICKANDCOLLECT_WHATSAPP',
-                'EVERPSCLICKANDCOLLECT_COLOR_MAIN',
-                'EVERPSCLICKANDCOLLECT_COLOR_WARNING',
-                'EVERPSCLICKANDCOLLECT_COLOR_NOTES',
-                'EVERPSCLICKANDCOLLECT_TEXT_T4',
-                'EVERPSCLICKANDCOLLECT_TEXT_T4_ON',
-            )
-        );
-        foreach (array_keys($this->getDefaultTexts()) as $code) {
-            $keys[] = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
-            $keys[] = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON';
-        }
-        foreach ($keys as $key) {
-            Configuration::deleteByName($key);
-        }
-        $this->uninstallModuleTab('AdminEverPsClickAndCollectPickup');
-        $this->uninstallModuleTab('AdminEverPsClickAndCollect');
-        return parent::uninstall();
-    }
-
-    private function installModuleTab($tabClass, $parent, $tabName)
-    {
-        $tab = new Tab();
-        $tab->active = 1;
-        $tab->class_name = $tabClass;
-        $tab->id_parent = (int)Tab::getIdFromClassName($parent);
-        $tab->position = Tab::getNewLastPosition($tab->id_parent);
-        $tab->module = $this->name;
-        if ($tabClass == 'AdminEverPsBlog' && $this->isSeven) {
-            $tab->icon = 'icon-team-ever';
-        }
-
-        foreach (Language::getLanguages(false) as $lang) {
-            $tab->name[(int) $lang['id_lang']] = $tabName;
-        }
-
-        return $tab->add();
-    }
-
-    private function uninstallModuleTab($tabClass)
-    {
-        $idTab = (int)Tab::getIdFromClassName($tabClass);
-        if (!$idTab) {
-            // Tab is not installed by this module anymore
-            return true;
-        }
-        $tab = new Tab($idTab);
-
-        return $tab->delete();
-    }
-
     /**
      * Load the configuration form
      */
     public function getContent()
     {
+        if (isset($_POST['submitEvercncPurge'])) {
+            if (!$this->context->employee || !$this->context->employee->can('delete', 'AdminModulessf')) {
+                // Same permission as uninstalling a module
+                $this->postErrors[] = $this->l('You do not have permission to delete the module data.');
+            } elseif (empty($_POST['evercnc_purge_confirm']) || !isset($_POST['evercnc_purge_word']) || trim((string) $_POST['evercnc_purge_word']) !== 'DELETE') {
+                $this->postErrors[] = $this->l('Nothing was deleted: tick the box and type DELETE to confirm.');
+            } elseif ($this->purgeData()) {
+                Tools::redirectAdmin($this->context->link->getAdminLink('AdminModulesManage'));
+            } else {
+                // The module may already be uninstalled: do not rebuild anything, only report
+                return $this->displayError(
+                    $this->l('The module data could not be deleted completely:') . ' ' . implode(' ; ', $this->getErrors())
+                );
+            }
+        }
+        // A failed or interrupted upgrade: bring the structure, settings, hooks and carrier up to date
+        if (!EverpsclickandcollectSchema::isUpToDate()) {
+            $installer = $this->getInstaller();
+            if ($installer->repair()) {
+                $this->postSuccess[] = $this->l('The module data structure was out of date and has been repaired.');
+            } else {
+                $this->postErrors[] = $this->l('The module data structure is out of date and could not be repaired:') . ' ' . implode(' ; ', $installer->getErrors());
+            }
+        }
         $this->registerHook('actionEmailSendBefore');
         $this->registerHook('actionObjectProductDeleteAfter');
         $cron = $this->context->link->getModuleLink(
@@ -322,6 +338,11 @@ class Everpsclickandcollect extends CarrierModule
         $this->html .= $this->context->smarty->fetch($this->local_path.'views/templates/admin/header.tpl');
 
         $this->html .= $this->renderForm();
+        $this->context->smarty->assign(
+            'evercnc_purge_url',
+            $this->context->link->getAdminLink('AdminModules', true, array(), array('configure' => $this->name))
+        );
+        $this->html .= $this->context->smarty->fetch($this->local_path.'views/templates/admin/purge.tpl');
         $this->html .= $this->context->smarty->fetch($this->local_path.'views/templates/admin/footer.tpl');
 
         return $this->html;
@@ -1073,11 +1094,18 @@ class Everpsclickandcollect extends CarrierModule
 
     public function getOrderShippingCost($params, $shipping_cost)
     {
+        // Disabled in this shop (the carrier itself is shared by all shops): not available
+        if (!$this->active) {
+            return false;
+        }
         return 0;
     }
 
     public function getOrderShippingCostExternal($params)
     {
+        if (!$this->active) {
+            return false;
+        }
         return true;
     }
 
@@ -1102,76 +1130,6 @@ class Everpsclickandcollect extends CarrierModule
             $allowed_stores = array($allowed_stores);
         }
         return $allowed_stores;
-    }
-
-    protected function addCarrier()
-    {
-        $result = false;
-        $carrier = new Carrier();
-        $carrier->name = 'Click and collect';
-        $carrier->is_module = true;
-        $carrier->active = 1;
-        $carrier->range_behavior = 1;
-        $carrier->need_range = 1;
-        $carrier->shipping_external = true;
-        $carrier->range_behavior = 0;
-        $carrier->external_module_name = $this->name;
-        $carrier->shipping_method = 2;
-
-        foreach (Language::getLanguages() as $lang) {
-            $carrier->delay[$lang['id_lang']] = $this->l('Pick your order on store');
-        }
-
-        if ($carrier->add() == true) {
-            // Copy logo img as carrier logo
-            @copy(
-                dirname(__FILE__).'/views/img/carrier_image.jpg',
-                _PS_SHIP_IMG_DIR_.'/'.(int) $carrier->id.'.jpg'
-            );
-            Configuration::updateValue(
-                'EVERPSCLICKANDCOLLECT_CARRIER_ID',
-                (int) $carrier->id
-            );
-            $result &= $this->addZones($carrier);
-            $result &= $this->addGroups($carrier);
-            $result &= $this->addRanges($carrier);
-        }
-        return $result;
-    }
-
-    protected function addGroups($carrier)
-    {
-        $groups_ids = array();
-        $groups = Group::getGroups(Context::getContext()->language->id);
-        foreach ($groups as $group) {
-            $groups_ids[] = $group['id_group'];
-        }
-
-        $carrier->setGroups($groups_ids);
-    }
-
-    protected function addRanges($carrier)
-    {
-        $range_price = new RangePrice();
-        $range_price->id_carrier = $carrier->id;
-        $range_price->delimiter1 = '0';
-        $range_price->delimiter2 = '10000';
-        $range_price->add();
-
-        $range_weight = new RangeWeight();
-        $range_weight->id_carrier = $carrier->id;
-        $range_weight->delimiter1 = '0';
-        $range_weight->delimiter2 = '10000';
-        $range_weight->add();
-    }
-
-    protected function addZones($carrier)
-    {
-        $zones = Zone::getZones();
-
-        foreach ($zones as $zone) {
-            $carrier->addZone($zone['id_zone']);
-        }
     }
 
     /**
@@ -1209,11 +1167,14 @@ class Everpsclickandcollect extends CarrierModule
 
     public function hookActionCarrierUpdate($params)
     {
-        if ((int) $params['id_carrier'] == (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')) {
-            Configuration::updateValue(
-                'EVERPSCLICKANDCOLLECT_CARRIER_ID',
-                $params['carrier']->id
-            );
+        // The staff edited the carrier: PrestaShop made a copy with a new id. Orders of the old id
+        // are still recognised (EverpsclickandcollectCarrierManager::isModuleCarrier()).
+        EverpsclickandcollectCarrierManager::clearCache();
+        if (EverpsclickandcollectCarrierManager::isModuleCarrier((int) $params['id_carrier'])
+            && isset($params['carrier']->id)
+            && EverpsclickandcollectCarrierManager::isModuleCarrier((int) $params['carrier']->id)
+        ) {
+            Configuration::updateGlobalValue('EVERPSCLICKANDCOLLECT_CARRIER_ID', (int) $params['carrier']->id);
         }
         /**
          * Not needed since 1.5
@@ -1330,7 +1291,7 @@ class Everpsclickandcollect extends CarrierModule
         // Restore what the customer already chose for this cart
         $mode = '';
         $periods = array();
-        $chosen = $current && in_array($current['pickup_mode'], array($P::MODE_NOW, $P::MODE_LATER));
+        $chosen = $current && isset($current['pickup_mode']) && in_array($current['pickup_mode'], array($P::MODE_NOW, $P::MODE_LATER));
         if ($chosen) {
             $mode = $current['pickup_mode'];
             if ($mode === $P::MODE_NOW && !$nowAvailable) {
@@ -1486,7 +1447,10 @@ class Everpsclickandcollect extends CarrierModule
             return;
         }
         if (!(bool) Configuration::get('EVERPSCLICKANDCOLLECT_ASK_DATE')) {
-            $this->savePickupChoice((int) $cart->id, $idStore, '', array());
+            if (!$this->savePickupChoice((int) $cart->id, $idStore, '', array())) {
+                $this->addCheckoutError($this->getPeriodErrorMessage('save_failed'));
+                $params['completed'] = false;
+            }
             return;
         }
         $settings = $P::getSettings();
@@ -1497,7 +1461,10 @@ class Everpsclickandcollect extends CarrierModule
                 $params['completed'] = false;
                 return;
             }
-            $this->savePickupChoice((int) $cart->id, $idStore, $P::MODE_NOW, array());
+            if (!$this->savePickupChoice((int) $cart->id, $idStore, $P::MODE_NOW, array())) {
+                $this->addCheckoutError($this->getPeriodErrorMessage('save_failed'));
+                $params['completed'] = false;
+            }
             return;
         }
         if ($mode !== $P::MODE_LATER) {
@@ -1516,7 +1483,10 @@ class Everpsclickandcollect extends CarrierModule
             $params['completed'] = false;
             return;
         }
-        $this->savePickupChoice((int) $cart->id, $idStore, $P::MODE_LATER, $P::mergePeriods($valid));
+        if (!$this->savePickupChoice((int) $cart->id, $idStore, $P::MODE_LATER, $P::mergePeriods($valid))) {
+            $this->addCheckoutError($this->getPeriodErrorMessage('save_failed'));
+            $params['completed'] = false;
+        }
     }
 
     public function getPeriodErrorMessage($code)
@@ -1534,6 +1504,8 @@ class Everpsclickandcollect extends CarrierModule
                 return $this->l('This time has already passed. Please choose a later time.');
             case 'bad_date':
                 return $this->l('The selected date is not available. Please choose another date.');
+            case 'save_failed':
+                return $this->l('Your pickup choice could not be saved. Please try again in a moment or choose another delivery method.');
             default:
                 return $this->l('The selected time is not available. Please choose another time.');
         }
@@ -1616,8 +1588,33 @@ class Everpsclickandcollect extends CarrierModule
             $data['pickup_summary'] = pSQL($P::summary($merged));
             // Kept for the back office date filter
             $data['delivery_date'] = $mode === $P::MODE_NOW ? date('Y-m-d') : ($dates ? implode(',', $dates) : null);
+            // Same periods in the 3.3.0 format, so that the pickup time is still shown after a downgrade
+            if ($mode === $P::MODE_LATER && $merged) {
+                $legacy = array();
+                foreach ($merged as $period) {
+                    $legacy[] = $period['date'] . ' ' . $P::toTime($period['start']) . '-' . $P::toTime($period['end']);
+                }
+                $data['delivery_hour'] = pSQL(implode(',', $legacy));
+            }
         }
-        return Db::getInstance()->insert('everpsclickandcollect', $data, true, true, Db::REPLACE);
+        try {
+            $saved = (bool) Db::getInstance()->insert('everpsclickandcollect', $data, true, true, Db::REPLACE);
+            $error = $saved ? '' : Db::getInstance()->getMsgError();
+        } catch (Exception $e) {
+            // e.g. files already updated but the upgrade not run yet: never break the checkout page
+            $saved = false;
+            $error = $e->getMessage();
+        }
+        if (!$saved) {
+            PrestaShopLogger::addLog(
+                'Click and collect: pickup choice of cart ' . (int) $idCart . ' not saved: ' . strip_tags((string) $error),
+                3,
+                null,
+                'Cart',
+                (int) $idCart
+            );
+        }
+        return $saved;
     }
 
     /**
@@ -1958,7 +1955,7 @@ class Everpsclickandcollect extends CarrierModule
         }
         $order = new Order((int) $params['templateVars']['{id_order}']);
         if (!Validate::isLoadedObject($order)
-            || (int) $order->id_carrier != (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
+            || !EverpsclickandcollectCarrierManager::isModuleCarrier((int) $order->id_carrier)
         ) {
             return;
         }
@@ -1998,7 +1995,7 @@ class Everpsclickandcollect extends CarrierModule
     protected function renderPickupInfo($order, $template, $forStaff = false)
     {
         if (!Validate::isLoadedObject($order)
-            || (int) $order->id_carrier != (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
+            || !EverpsclickandcollectCarrierManager::isModuleCarrier((int) $order->id_carrier)
         ) {
             return;
         }
@@ -2039,7 +2036,7 @@ class Everpsclickandcollect extends CarrierModule
     {
         $order = new Order((int) $params['id_order']);
         if (!Validate::isLoadedObject($order)
-            || (int) $order->id_carrier != (int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
+            || !EverpsclickandcollectCarrierManager::isModuleCarrier((int) $order->id_carrier)
         ) {
             return;
         }
@@ -2136,7 +2133,7 @@ class Everpsclickandcollect extends CarrierModule
                 'o',
                 _DB_PREFIX_ . 'everpsclickandcollect',
                 'evercnc',
-                'evercnc.id_cart = o.id_cart AND o.id_carrier = ' . (int) Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID')
+                'evercnc.id_cart = o.id_cart AND o.id_carrier IN (' . EverpsclickandcollectCarrierManager::getIdsSql() . ')'
             );
             if ($key === 'search_query_builder') {
                 $legacy = 'IF(evercnc.delivery_hour LIKE \'____-__-__ %\', '
@@ -2384,9 +2381,10 @@ class Everpsclickandcollect extends CarrierModule
 
     public function hookActionAttributeCombinationDelete($params)
     {
-        EverpsclickandcollectStoreStock::dropStoreStock(
-            (int) $params['object']->id
-        );
+        // Only the stock of the deleted combination (hook not registered by default)
+        if (!empty($params['id_product_attribute'])) {
+            EverpsclickandcollectStoreStock::dropCombinationStock((int) $params['id_product_attribute']);
+        }
     }
 
     public function hookActionOrderStatusUpdate($params)
@@ -2412,7 +2410,7 @@ class Everpsclickandcollect extends CarrierModule
         } else {
             $order = new Order((int) $params['id_order']);
         }
-        if ((int)Configuration::get('EVERPSCLICKANDCOLLECT_CARRIER_ID') != $order->id_carrier) {
+        if (!EverpsclickandcollectCarrierManager::isModuleCarrier((int) $order->id_carrier)) {
             return;
         }
         $cart = new Cart(
@@ -2738,6 +2736,17 @@ class Everpsclickandcollect extends CarrierModule
             || !Validate::isLoadedObject($customer)
         ) {
             return false;
+        }
+        // Already done (this runs again on every order status change): do not create another address
+        if (Validate::isLoadedObject($deliveryAddress)
+            && (int) $deliveryAddress->id === (int) $order->id_address_delivery
+            && $deliveryAddress->deleted
+            && (int) $deliveryAddress->id_customer === (int) $customer->id
+            && $deliveryAddress->alias === $store->name[$customer->id_lang]
+            && $deliveryAddress->address1 === $store->address1[$customer->id_lang]
+            && (string) $deliveryAddress->postcode === (string) $store->postcode
+        ) {
+            return true;
         }
         try {
             $address = new Address();

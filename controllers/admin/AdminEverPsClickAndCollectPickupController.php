@@ -49,8 +49,9 @@ class AdminEverPsClickAndCollectPickupController extends ModuleAdminController
         $row = $this->module->getCartPickup((int) $order->id_cart);
         $idStore = $row ? (int) $row['id_store'] : (int) Configuration::get('EVERPSCLICKANDCOLLECT_DEFAULT_STORE');
         $mode = (string) Tools::getValue('evercnc_mode');
+        $saved = true;
         if ($mode === $P::MODE_NOW) {
-            $this->module->savePickupChoice((int) $order->id_cart, $idStore, $P::MODE_NOW, array());
+            $saved = $this->module->savePickupChoice((int) $order->id_cart, $idStore, $P::MODE_NOW, array());
         } elseif ($mode === $P::MODE_LATER) {
             // Staff may set any date (no "bookable days" or "past time" restriction)
             list($valid, $error) = $P::validatePeriods(
@@ -64,7 +65,10 @@ class AdminEverPsClickAndCollectPickupController extends ModuleAdminController
             if ($error) {
                 Tools::redirectAdmin($back . '&evercnc_error=' . urlencode($error) . '#evercnc-pickup');
             }
-            $this->module->savePickupChoice((int) $order->id_cart, $idStore, $P::MODE_LATER, $P::mergePeriods($valid));
+            $saved = $this->module->savePickupChoice((int) $order->id_cart, $idStore, $P::MODE_LATER, $P::mergePeriods($valid));
+        }
+        if (!$saved) {
+            Tools::redirectAdmin($back . '&evercnc_error=save_failed#evercnc-pickup');
         }
         Tools::redirectAdmin($back . '&evercnc_saved=1#evercnc-pickup');
     }

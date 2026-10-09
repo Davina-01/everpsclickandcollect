@@ -1,11 +1,11 @@
 # Ever PS Click & Collect – pickup time fork (PrestaShop 8)
 
-Click & collect (store pickup) carrier for PrestaShop 1.7 / 8, with a **pickup time choice** designed for shops where customers rarely know exactly when they will come.
+Click & collect (store pickup) carrier for PrestaShop 8 / 9, with a **pickup time choice** designed for shops where customers rarely know exactly when they will come.
 
 > This is an unofficial fork of [TeamEver/everpsclickandcollect](https://github.com/TeamEver/everpsclickandcollect). It is not an official Team Ever release.
 > Original work © Team Ever, released under the [Academic Free License 3.0](LICENSE.md). The changes of this fork are released under the same license.
 
-Compatible with **PrestaShop 8 and 9**: tested on **8.2.0** (classic theme) and **9.2.0** (Hummingbird and classic themes), PHP 7.2 – 8.4. Customer and back office texts: **French** (default) and **English**; languages without their own default texts get the French ones.
+Declared for **PrestaShop 8.0.0 – 9.x**. Tested on **8.2.0** (classic theme) and **9.2.0** (Hummingbird and classic themes) with PHP 8.3. Not tested: PrestaShop 8.0.x, 8.1.x, 9.0.x, 9.1.x and PHP versions other than 8.3 (the code is checked for PHP 7.2 – 8.4 compatibility, without running it). PrestaShop 1.7 is not supported. Customer and back office texts: **French** (default) and **English**; languages without their own default texts get the French ones.
 
 ---
 
@@ -57,7 +57,24 @@ Both rules can be switched off. The customer sees the warning box T6 while choos
 4. Open the module configuration and set the options below.
 5. PrestaShop 8 also ships a carrier named "Click and collect": disable it in **Shipping → Carriers** to avoid two carriers with the same name.
 
-**Upgrading**: upload the new zip over the installed module. Do **not** uninstall first: uninstalling deletes the table holding the pickup choices of all orders.
+**Upgrading**: upload the new zip over the installed module (no need to uninstall). Make a database backup first.
+
+### Module lifecycle (3.4.1)
+
+| Action | What happens to the data |
+|---|---|
+| Install | Creates what is missing (tables, settings, hooks, back office page, carrier). An existing carrier and existing data are reused. If a step fails, the install is rolled back and can simply be run again |
+| Upgrade | Same steps, idempotent. If an upgrade step fails, the version is not changed and the upgrade can be run again once the cause is fixed |
+| Disable | The carrier is deactivated (customers cannot choose click & collect while the module cannot ask for the store and time) |
+| Enable | The carrier is reactivated. Enabling also repairs an interrupted install or upgrade |
+| Uninstall / Reset | **Data is kept**: pickup choices of all orders, store stock, settings. The carrier is deactivated, never deleted, and reused by a reinstall |
+| Delete all module data | Configuration page, last panel: tick the box and type `DELETE`. Uninstalls the module and permanently deletes the pickup choices of all orders, the store stock, the store hours and the settings. Orders and stores are not deleted; the carrier is only marked as deleted so orders keep it |
+
+Opening the module configuration page also checks the database structure and repairs it if an upgrade was interrupted.
+
+When the staff edits the carrier in *Shipping → Carriers*, PrestaShop creates a copy with a new id: orders of the old id are still recognised as click & collect orders.
+
+The audit of these scenarios and the test runner are in [AUDIT.md](AUDIT.md) and `tests/lifecycle/` (never run the tests on a live shop; they only accept a database whose name ends with `_lc`). Do not copy the `tests/` folder to a shop.
 
 ---
 
@@ -108,7 +125,8 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 
 ## Technical notes
 
-- Pickup choices are stored in `ps_everpsclickandcollect` (one row per cart): `pickup_mode` (`now` / `later`), `pickup_periods` (JSON), `pickup_prepare`, `pickup_summary`, plus the original `id_store`, `delivery_date`, `delivery_hour` columns.
+- Pickup choices are stored in `ps_everpsclickandcollect` (one row per cart): `pickup_mode` (`now` / `later`), `pickup_periods` (JSON), `pickup_prepare`, `pickup_summary`, plus the original `id_store`, `delivery_date`, `delivery_hour` columns (`delivery_hour` also receives the periods in the 3.3.0 format, so a downgrade still shows them).
+- Lifecycle code: `lifecycle/` – `EverpsclickandcollectSchema` (tables), `EverpsclickandcollectCarrierManager` (carrier), `EverpsclickandcollectMigrator` (settings of older versions), `EverpsclickandcollectInstaller` (install / repair / uninstall / delete all data / enable / disable).
 - Hooks: `displayCarrierExtraContent`, `actionValidateStepComplete` (blocks "Continue"), `displayOrderConfirmation`, `displayAdminOrderMain`, `displayPDFDeliverySlip`, `actionEmailSendBefore`, `actionOrderGridDefinitionModifier`, `actionOrderGridQueryBuilderModifier`.
 - A hidden back office controller (`AdminEverPsClickAndCollectPickup`) saves the pickup time changed by the staff.
 - PrestaShop 9 bundles theme CSS in a cache: after updating the module, clear the cache (Advanced parameters → Performance → Clear cache) so the new styles are used.
@@ -117,6 +135,7 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 
 ### Changelog
 
+- **3.4.1** – Lifecycle fixes (see [AUDIT.md](AUDIT.md)): uninstall and reset keep the data and never delete the carrier; explicit "Delete all module data" action; disabled module = carrier not offered; orders keep their pickup information after the carrier is edited; failed installs roll back and failed upgrades can be retried, enabling the module repairs them; upgrades from 2.x fixed; no duplicate carrier, store row or store address; declared compatibility PrestaShop 8.0.0 – 9.x.
 - **3.4.0** – "Pick up now / Pick up later" with up to 3 prefilled periods; pickup hours per week day and part-day closures; "Prepare on arrival" rules; editable notes and warning box; WhatsApp link; color settings; staff can change the pickup time; delivery slip only (no invoice).
 - **3.3.0** – Tabbed time slot picker, slots on several days, morning / afternoon mode.
 - **3.2.0** – 30-minute time slots; PrestaShop 8.2 fixes: order confirmation block never displayed, cached carrier block overwriting the customer's choice, store id overwritten by the hours object, undefined variable and wrong language in the store email, inverted store stock condition, uninstall failure, PHP 8.2 deprecations, remote version check removed.

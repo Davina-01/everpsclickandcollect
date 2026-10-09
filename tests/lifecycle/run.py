@@ -17,7 +17,7 @@ SAFETY
 
 Usage
   python3 tests/lifecycle/run.py --shop /path/to/shop_copy --db ps_lc --db-user ps \
-      --clean-dump never_installed.sql --out results_dir [--only S01,S04]
+      --clean-dump never_installed.sql --out results_dir [--only S01,S04] [--current-ref COMMIT]
 
   --clean-dump: dump of the shop copy where the module has never been installed (orders exist).
 """
@@ -53,6 +53,8 @@ class Runner:
         if "'database_name' => '%s'" % self.db not in params:
             sys.exit('refusing: the shop at --shop does not use database %s' % self.db)
         self.env = dict(os.environ, LC_DB=self.db)
+        # --current-ref: test a git commit as "current" instead of the working tree (e.g. the code before fixes)
+        self.current_ref = a.current_ref
         self.results = []
         self.scenario = None
 
@@ -84,6 +86,8 @@ class Runner:
         dst = os.path.join(self.shop, 'modules', MODULE)
         shutil.rmtree(dst, ignore_errors=True)
         os.makedirs(dst)
+        if ref == 'current' and self.current_ref:
+            ref = self.current_ref
         if ref == 'current':
             self.sh('rsync -a --exclude .git --exclude tests %s/ %s/' % (REPO, dst), check=True)
         else:
@@ -164,7 +168,7 @@ class Runner:
             self.sql("INSERT INTO ps_everpsclickandcollect (id_cart, id_store, delivery_date, delivery_hour) SELECT id_cart, 1, '2026-10-09', '10:00-10:30,10:30-11:00' FROM ps_orders WHERE id_carrier = {IDC}".replace('{IDC}', idc))
         else:  # current: half 3.3.0 slots, half 3.4.0 choices
             self.sql("INSERT INTO ps_everpsclickandcollect (id_cart, id_store, delivery_date, delivery_hour) SELECT id_cart, 1, '2026-10-09,2026-10-12', '2026-10-09 15:00-15:30,2026-10-12 09:00-09:30' FROM ps_orders WHERE id_carrier = {IDC} AND id_order % 2 = 0".replace('{IDC}', idc))
-            self.sql("INSERT INTO ps_everpsclickandcollect (id_cart, id_store, delivery_date, pickup_mode, pickup_periods, pickup_prepare, pickup_summary) SELECT id_cart, 1, '2026-10-09', 'later', '[{\"date\":\"2026-10-09\",\"start\":840,\"end\":1020}]', 1, '2026-10-09 14:00-17:00' FROM ps_orders WHERE id_carrier = {IDC} AND id_order % 2 = 1".replace('{IDC}', idc))
+            self.sql("INSERT INTO ps_everpsclickandcollect (id_cart, id_store, delivery_date, pickup_mode, pickup_periods, pickup_prepare, pickup_summary) SELECT id_cart, 1, '2026-10-09', 'later', '[{\"date\":\"2026-10-09\",\"start\":\"14:00\",\"end\":\"17:00\"}]', 1, '2026-10-09 14:00-17:00' FROM ps_orders WHERE id_carrier = {IDC} AND id_order % 2 = 1".replace('{IDC}', idc))
             self.sql("UPDATE ps_configuration_lang cl JOIN ps_configuration c ON c.id_configuration = cl.id_configuration SET cl.value = 'CUSTOM T2' WHERE c.name = 'EVERPSCLICKANDCOLLECT_TEXT_T2' AND cl.id_lang = 1")
             self.sql("UPDATE ps_configuration SET value = '{\"1\":\"09:00-12:00\",\"2\":\"09:00-12:00\",\"3\":\"\",\"4\":\"09:00-12:00\",\"5\":\"09:00-12:00\",\"6\":\"09:00-12:00\",\"7\":\"\"}' WHERE name = 'EVERPSCLICKANDCOLLECT_SCHEDULE'")
         self.sql("INSERT INTO ps_everpsclickandcollect_store_stock (id_store, id_product, id_product_attribute, id_shop, qty) VALUES (1, 1, 1, 1, '5'), (1, 1, 2, 1, '3'), (2, 2, 0, 1, '7')")
@@ -181,7 +185,10 @@ class Runner:
         return orders
 
     def shown(self, rendered):
-        return [k for k, v in rendered.items() if v and 'Pickup' in v and not v.startswith('EXCEPTION')]
+        """Orders whose BO block shows a pickup time (every seeded row has a time)"""
+        return [k for k, v in rendered.items() if v and 'Pickup' in v and not v.startswith('EXCEPTION')
+                and (':' in v.split('Change pickup time')[0] or 'Monday' in v or 'Friday' in v or 'Saturday' in v)
+                and 'No time given' not in v]
 
     # ---------- scenarios ----------
     def S01_fresh_install(self):
@@ -227,6 +234,11 @@ class Runner:
         self.check('disable succeeds', ok, msg[:80])
         self.check('carrier NOT offered while module disabled', idc not in off.get('offered', []), str(off))
         self.check('data kept while disabled', s['tables']['everpsclickandcollect'] != 'MISSING', str(s['tables']))
+        self.sql('UPDATE ps_carrier SET active = 1 WHERE id_carrier = %d' % idc)
+        self.clear_cache()
+        off = self.tool('offered')
+        self.check('not offered while disabled even if the carrier is switched on by hand', idc not in off.get('offered', []), str(off))
+        self.sql('UPDATE ps_carrier SET active = 0 WHERE id_carrier = %d' % idc)
         ok, msg = self.console('enable')
         off = self.tool('offered')
         self.check('enable succeeds', ok, msg[:80])
@@ -395,7 +407,7 @@ class Runner:
         self.console('install')
         self.seed_history('3.1.1')
         self.deploy('current')
-        cur = open(os.path.join(REPO, MODULE + '.php')).read().split("$this->version = '")[1].split("'")[0]
+        cur = open(os.path.join(self.shop, 'modules', MODULE, MODULE + '.php')).read().split("$this->version = '")[1].split("'")[0]
         self.sql("UPDATE ps_module SET version = '%s', active = 0 WHERE name = '%s'" % (cur, MODULE))
         self.sql("DELETE FROM ps_module_shop WHERE id_module = (SELECT id_module FROM ps_module WHERE name = '%s')" % MODULE)
         before = self.snap('before')
@@ -460,6 +472,38 @@ class Runner:
         self.check('carrier rows kept, flagged deleted', s['carriers'] and all(c['deleted'] == '1' for c in s['carriers']), str(s['carriers']))
         self.check('no order loses its carrier', s['orders_with_missing_carrier'] == before['orders_with_missing_carrier'], '%s -> %s' % (before['orders_with_missing_carrier'], s['orders_with_missing_carrier']))
         self.check('orders untouched', s['orders_total'] == before['orders_total'], '%s -> %s' % (before['orders_total'], s['orders_total']))
+        ok, msg = self.console('install')
+        s2 = self.snap('reinstalled')
+        self.check('install after purge starts clean', ok and s2['tables']['everpsclickandcollect'] == 0 and len(self.active_module_carriers(s2)) == 1, '%s %s' % (s2['tables'], s2['carriers']))
+
+    def S17_merchant_carrier_choices(self):
+        """Carrier switched off or deleted by the merchant, duplicate carriers of older versions"""
+        self.restore(os.path.join(self.out, 'S01_fresh.sql'))
+        self.deploy('current')
+        idc = int(self.snap('before')['carrier_id_cfg'])
+        cur = open(os.path.join(self.shop, 'modules', MODULE, MODULE + '.php')).read().split("$this->version = '")[1].split("'")[0]
+        # 1. switched off by the merchant: an upgrade (repair) and a disable / enable keep it off
+        self.sql('UPDATE ps_carrier SET active = 0 WHERE id_carrier = %d' % idc)
+        r = self.tool('rerun_upgrades', cur)
+        self.console('disable')
+        self.console('enable')
+        s = self.snap('off_by_merchant')
+        self.check('carrier switched off by the merchant stays off', not self.active_module_carriers(s), '%s %s' % (r, s['carriers']))
+        # 2. deleted by the merchant: repair does not create a new carrier
+        self.sql('UPDATE ps_carrier SET deleted = 1 WHERE id_carrier = %d' % idc)
+        self.tool('rerun_upgrades', cur)
+        self.console('disable')
+        self.console('enable')
+        s = self.snap('deleted_by_merchant')
+        self.check('carrier deleted by the merchant is not re-created', len(s['carriers']) == 1, str(s['carriers']))
+        # 3. duplicate active carriers (older versions): disabling the module hides all of them
+        self.restore(os.path.join(self.out, 'S01_fresh.sql'))
+        self.deploy('current')
+        self.tool('wizard_edit', idc)  # new copy, old one deleted
+        self.sql("INSERT INTO ps_carrier (id_reference, name, url, active, deleted, shipping_handling, range_behavior, is_module, is_free, shipping_external, need_range, external_module_name, shipping_method, position, max_width, max_height, max_depth, max_weight, grade) SELECT id_reference + 100, name, url, 1, 0, shipping_handling, range_behavior, is_module, is_free, shipping_external, need_range, external_module_name, shipping_method, position, max_width, max_height, max_depth, max_weight, grade FROM ps_carrier WHERE id_carrier = %d" % idc)
+        self.console('disable')
+        s = self.snap('duplicates_disabled')
+        self.check('disable deactivates every carrier of the module', not self.active_module_carriers(s), str(s['carriers']))
 
     def run(self, only):
         names = sorted(n for n in dir(self) if n[:1] == 'S' and n[1:3].isdigit())
@@ -489,5 +533,6 @@ if __name__ == '__main__':
     ap.add_argument('--clean-dump', required=True)
     ap.add_argument('--out', required=True)
     ap.add_argument('--only', default='')
+    ap.add_argument('--current-ref', default='')
     a = ap.parse_args()
     Runner(a).run([x for x in a.only.split(',') if x])

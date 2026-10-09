@@ -23,7 +23,8 @@ if (!defined('_PS_VERSION_')) {
 
 function upgrade_module_2_1_5()
 {
-    $result = false;
+    // Was "false": false & x is always false, so this script always failed (see AUDIT.md R6)
+    $result = true;
     $sql = array();
     $sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'everpsclickandcollect_store_data` (
         `everpsclickandcollect_store_data` int(11) NOT NULL AUTO_INCREMENT,
@@ -46,7 +47,7 @@ function upgrade_module_2_1_5()
     ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
     
     foreach ($sql as $s) {
-        $result &= Db::getInstance()->execute($s);
+        $result = Db::getInstance()->execute($s) && $result;
     }
-    return $result;
+    return (bool) $result;
 }

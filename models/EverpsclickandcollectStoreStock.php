@@ -449,6 +449,24 @@ class EverpsclickandcollectStoreStock extends ObjectModel
     }
 
     /**
+     * Drop the stock of one combination in every store
+     *
+     * @param int $id_product_attribute
+     *
+     * @return bool
+     */
+    public static function dropCombinationStock($id_product_attribute)
+    {
+        if (!(int) $id_product_attribute) {
+            return false;
+        }
+        return Db::getInstance()->delete(
+            'everpsclickandcollect_store_stock',
+            'id_product_attribute = ' . (int) $id_product_attribute
+        );
+    }
+
+    /**
      * Drop all product stock
      *
      * @param int $id_product

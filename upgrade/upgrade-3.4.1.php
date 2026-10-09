@@ -21,12 +21,17 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-$sql = array();
-$sql[] = 'DROP TABLE IF EXISTS `'._DB_PREFIX_.'everpsclickandcollect`';
-$sql[] = 'DROP TABLE IF EXISTS `'._DB_PREFIX_.'everpsclickandcollect_store_stock`';
-
-foreach ($sql as $query) {
-    if (Db::getInstance()->execute($query) == false) {
-        return false;
-    }
+/**
+ * 3.4.1: lifecycle fixes (see AUDIT.md). Uninstall keeps the data, the carrier is never deleted,
+ * disabled module = carrier not offered, orders of edited carriers recognised, legacy upgrade scripts fixed.
+ * Brings shops that ran 3.4.0 (or a failed upgrade) to the current state.
+ *
+ * The steps (new columns, conversion of the 3.3.0 settings, default settings, hooks, back office page,
+ * carrier) are done by the installer's repair(), which is idempotent and also runs on enable.
+ *
+ * @param Everpsclickandcollect $module
+ */
+function upgrade_module_3_4_1($module)
+{
+    return $module->getInstaller()->repairForUpgrade('3.4.1');
 }

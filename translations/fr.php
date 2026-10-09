@@ -304,3 +304,15 @@ $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_ff9eb8bd8c927
 $_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_a1ae30e84c142c4e6930950810c8e5f1'] = 'Veuillez indiquer quand vous pourriez venir.';
 $_MODULE['<{everpsclickandcollect}prestashop>extra_carrier_b70b0d6d5a04faf94aac04375c719a9c'] = 'Quand pourriez-vous venir ? (jusqu\'à 3 plages horaires)';
 $_MODULE['<{everpsclickandcollect}prestashop>admin_order_a1dcc95d92417e9e4ad7a8eb7171ca6a'] = 'Pour « Retrait plus tard » : 1 à 3 plages horaires, laissez une ligne vide pour la supprimer.';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_ff8da93e37939672a82cc00609dcdd5d'] = 'Votre choix de retrait n\'a pas pu être enregistré. Veuillez réessayer dans un instant ou choisir un autre mode de livraison.';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_abfcf15c6c93fc58232daf4e2b8bec90'] = 'Rien n\'a été supprimé : cochez la case et tapez DELETE pour confirmer.';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_21da988bf0a9cc2402cc78bec07222a8'] = 'Les données du module n\'ont pas pu être entièrement supprimées :';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_7cf275d02709d4405b4d756a3139e3c0'] = 'La structure des données du module n\'était pas à jour et a été réparée.';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_37b055a7b1c0f47db43641a166a8ad03'] = 'La structure des données du module n\'est pas à jour et n\'a pas pu être réparée :';
+$_MODULE['<{everpsclickandcollect}prestashop>purge_ed7359f2f2f8a7ead4c19dc2a09c5524'] = 'Supprimer toutes les données du module';
+$_MODULE['<{everpsclickandcollect}prestashop>purge_2ba49f5c48d28ab45b77ff18d9bd1653'] = 'La désinstallation du module conserve ses données (choix de retrait de toutes les commandes, stock des magasins, réglages) et désactive son transporteur : une réinstallation ou une mise à jour retrouve tout.';
+$_MODULE['<{everpsclickandcollect}prestashop>purge_6af8b60d638506deab79c2712bf63d96'] = 'Cette action désinstalle le module et supprime définitivement le magasin, la date et l\'heure de retrait de toutes les commandes, le stock des magasins et tous les réglages du module. Elle est irréversible. Les commandes et les magasins eux-mêmes ne sont pas supprimés, et le transporteur est seulement marqué comme supprimé afin que les commandes le conservent.';
+$_MODULE['<{everpsclickandcollect}prestashop>purge_2d68b7662dbecb7034f7a4b7d7ac34a8'] = 'Faites d\'abord une sauvegarde de la base de données.';
+$_MODULE['<{everpsclickandcollect}prestashop>purge_66e033033c7c528c0c9a0ecc438e48ff'] = 'Je comprends que ces données seront supprimées définitivement.';
+$_MODULE['<{everpsclickandcollect}prestashop>purge_7df3f792d2f290b4440feb6b71c6ed62'] = 'Tapez DELETE pour confirmer';
+$_MODULE['<{everpsclickandcollect}prestashop>purge_2b6e890e8a3c440c6e6021f66c241f02'] = 'Supprimer toutes les données du module et désinstaller';

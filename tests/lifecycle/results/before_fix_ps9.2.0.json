@@ -9,7 +9,7 @@
   "scenario": "S01",
   "check": "module active",
   "pass": true,
-  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '1'}"
+  "detail": "{'id_module': '71', 'version': '3.4.0', 'active': '1'}"
  },
  {
   "scenario": "S01",
@@ -21,13 +21,13 @@
   "scenario": "S01",
   "check": "exactly 1 active module carrier",
   "pass": true,
-  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '0', 'active': '1'}]"
  },
  {
   "scenario": "S01",
   "check": "CARRIER_ID points to it",
   "pass": true,
-  "detail": "7"
+  "detail": "6"
  },
  {
   "scenario": "S01",
@@ -39,7 +39,7 @@
   "scenario": "S01",
   "check": "carrier offered at checkout",
   "pass": true,
-  "detail": "{'cart': 51, 'offered': [7, 1, 2]}"
+  "detail": "{'cart': 12, 'offered': [6, 1, 2]}"
  },
  {
   "scenario": "S02",
@@ -57,7 +57,7 @@
   "scenario": "S02",
   "check": "CARRIER_ID unchanged",
   "pass": false,
-  "detail": "7 -> 8"
+  "detail": "6 -> 7"
  },
  {
   "scenario": "S02",
@@ -81,7 +81,7 @@
   "scenario": "S03",
   "check": "carrier NOT offered while module disabled",
   "pass": false,
-  "detail": "{'cart': 51, 'offered': [7, 1, 2]}"
+  "detail": "{'cart': 12, 'offered': [6, 1, 2]}"
  },
  {
   "scenario": "S03",
@@ -93,7 +93,7 @@
   "scenario": "S03",
   "check": "not offered while disabled even if the carrier is switched on by hand",
   "pass": false,
-  "detail": "{'cart': 51, 'offered': [7, 1, 2]}"
+  "detail": "{'cart': 12, 'offered': [6, 1, 2]}"
  },
  {
   "scenario": "S03",
@@ -105,7 +105,7 @@
   "scenario": "S03",
   "check": "carrier offered again after enable",
   "pass": false,
-  "detail": "{'cart': 51, 'offered': [1, 2]}"
+  "detail": "{'cart': 12, 'offered': [1, 2]}"
  },
  {
   "scenario": "S04",
@@ -117,7 +117,7 @@
   "scenario": "S04",
   "check": "pickup rows kept",
   "pass": false,
-  "detail": "16 -> MISSING"
+  "detail": "6 -> MISSING"
  },
  {
   "scenario": "S04",
@@ -128,14 +128,14 @@
  {
   "scenario": "S04",
   "check": "no order loses its carrier",
-  "pass": false,
-  "detail": "0 -> 16 orders without carrier row"
+  "pass": true,
+  "detail": "0 -> 0 orders without carrier row"
  },
  {
   "scenario": "S04",
   "check": "module carrier no longer active",
   "pass": true,
-  "detail": "[]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '1', 'active': '1'}]"
  },
  {
   "scenario": "S04",
@@ -165,13 +165,13 @@
   "scenario": "S04",
   "check": "exactly 1 active module carrier",
   "pass": true,
-  "detail": "[{'id_carrier': '8', 'id_reference': '8', 'deleted': '0', 'active': '1'}]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '1', 'active': '1'}, {'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
  },
  {
   "scenario": "S04",
   "check": "carrier reused (no new carrier row)",
-  "pass": true,
-  "detail": "1 -> 1 rows"
+  "pass": false,
+  "detail": "1 -> 2 rows"
  },
  {
   "scenario": "S04",
@@ -195,7 +195,7 @@
   "scenario": "S05",
   "check": "pickup rows kept",
   "pass": false,
-  "detail": "16 -> 0"
+  "detail": "6 -> 0"
  },
  {
   "scenario": "S05",
@@ -206,14 +206,14 @@
  {
   "scenario": "S05",
   "check": "no order loses its carrier",
-  "pass": false,
-  "detail": "0 -> 16"
+  "pass": true,
+  "detail": "0 -> 0"
  },
  {
   "scenario": "S06",
   "check": "CARRIER_ID follows the new carrier",
   "pass": true,
-  "detail": "7 -> 8"
+  "detail": "6 -> 7"
  },
  {
   "scenario": "S06",
@@ -231,25 +231,25 @@
   "scenario": "S07",
   "check": "upgrade succeeds",
   "pass": true,
-  "detail": "Upgrade action on module everpsclickandcollect succeeded."
+  "detail": "Update action on module everpsclickandcollect succeeded."
  },
  {
   "scenario": "S07",
   "check": "module active after upgrade",
   "pass": true,
-  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '1'}"
+  "detail": "{'id_module': '71', 'version': '3.4.0', 'active': '1'}"
  },
  {
   "scenario": "S07",
   "check": "all pickup rows kept",
   "pass": true,
-  "detail": "16 -> 16"
+  "detail": "6 -> 6"
  },
  {
   "scenario": "S07",
   "check": "stock rows kept",
   "pass": true,
-  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+  "detail": "{'everpsclickandcollect': 6, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
  },
  {
   "scenario": "S07",
@@ -267,7 +267,7 @@
   "scenario": "S07",
   "check": "same carrier, still active",
   "pass": true,
-  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '0', 'active': '1'}]"
  },
  {
   "scenario": "S07",
@@ -285,25 +285,25 @@
   "scenario": "S08",
   "check": "upgrade succeeds",
   "pass": true,
-  "detail": "Upgrade action on module everpsclickandcollect succeeded."
+  "detail": "Update action on module everpsclickandcollect succeeded."
  },
  {
   "scenario": "S08",
   "check": "module active after upgrade",
   "pass": true,
-  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '1'}"
+  "detail": "{'id_module': '71', 'version': '3.4.0', 'active': '1'}"
  },
  {
   "scenario": "S08",
   "check": "all pickup rows kept",
   "pass": true,
-  "detail": "16 -> 16"
+  "detail": "6 -> 6"
  },
  {
   "scenario": "S08",
   "check": "stock rows kept",
   "pass": true,
-  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+  "detail": "{'everpsclickandcollect': 6, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
  },
  {
   "scenario": "S08",
@@ -321,7 +321,7 @@
   "scenario": "S08",
   "check": "same carrier, still active",
   "pass": true,
-  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '0', 'active': '1'}]"
  },
  {
   "scenario": "S08",
@@ -351,13 +351,13 @@
   "scenario": "S10",
   "check": "upgrade succeeds",
   "pass": false,
-  "detail": "Cannot upgrade module everpsclickandcollect. To prevent any problem, this module has been turned off"
+  "detail": "Cannot upgrade module everpsclickandcollect. No update has been applied, To prevent any problem, this module has been turned off"
  },
  {
   "scenario": "S10",
   "check": "module active",
   "pass": false,
-  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '0'}"
+  "detail": "{'id_module': '71', 'version': '3.4.0', 'active': '0'}"
  },
  {
   "scenario": "S10",
@@ -369,43 +369,43 @@
   "scenario": "S10",
   "check": "retry of the upgrade migrates the schema",
   "pass": false,
-  "detail": "Upgrade action on module everpsclickandcollect succeeded."
+  "detail": "Update action on module everpsclickandcollect succeeded."
  },
  {
   "scenario": "S10",
   "check": "after enable, checkout can save",
   "pass": false,
-  "detail": "{'exception': \"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pickup_mode' in 'INSERT INTO'\"}"
+  "detail": "{'exception': \"Unknown column 'pickup_mode' in 'INSERT INTO'REPLACE INTO `ps_everpsclickandcollect` (`id_cart`, `id_store`, `delivery_date`, `delivery"
  },
  {
   "scenario": "S11",
   "check": "upgrade reports failure",
   "pass": true,
-  "detail": "02:39:38 CRITICAL  [console] Error thrown while running command \"prestashop:module upgrade everpsclickandcollect --env=prod --no-debug\". Message: \"SQLSTATE[4200"
+  "detail": "02:50:25 CRITICAL  [console] Error thrown while running command \"prestashop:module upgrade everpsclickandcollect --env=prod --no-debug\". Message: \"ALTER command"
  },
  {
   "scenario": "S11",
   "check": "no pickup row lost",
   "pass": true,
-  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+  "detail": "{'everpsclickandcollect': 6, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
  },
  {
   "scenario": "S11",
   "check": "version NOT bumped (upgrade can be retried)",
   "pass": true,
-  "detail": "{'id_module': '70', 'version': '3.1.1', 'active': '1'}"
+  "detail": "{'id_module': '71', 'version': '3.1.1', 'active': '1'}"
  },
  {
   "scenario": "S11",
   "check": "checkout does not crash while schema is old",
   "pass": false,
-  "detail": "{'exception': \"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pickup_mode' in 'INSERT INTO'\"}"
+  "detail": "{'exception': \"Unknown column 'pickup_mode' in 'INSERT INTO'REPLACE INTO `ps_everpsclickandcollect` (`id_cart`, `id_store`, `delivery_date`, `delivery"
  },
  {
   "scenario": "S11",
   "check": "retry succeeds",
   "pass": true,
-  "detail": "Upgrade action on module everpsclickandcollect succeeded."
+  "detail": "Update action on module everpsclickandcollect succeeded."
  },
  {
   "scenario": "S11",
@@ -423,31 +423,31 @@
   "scenario": "S12",
   "check": "checkout saves after enable",
   "pass": false,
-  "detail": "{'exception': \"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'pickup_mode' in 'INSERT INTO'\"}"
+  "detail": "{'exception': \"Unknown column 'pickup_mode' in 'INSERT INTO'REPLACE INTO `ps_everpsclickandcollect` (`id_cart`, `id_store`, `delivery_date`, `delivery"
  },
  {
   "scenario": "S12",
   "check": "no pickup row lost",
   "pass": true,
-  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+  "detail": "{'everpsclickandcollect': 6, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
  },
  {
   "scenario": "S13",
   "check": "install reports failure",
   "pass": true,
-  "detail": "02:40:04 CRITICAL  [console] Error thrown while running command \"prestashop:module install everpsclickandcollect --env=prod --no-debug\". Mes"
+  "detail": "02:51:27 CRITICAL  [console] Error thrown while running command \"prestashop:module install everpsclickandcollect --env=prod --no-debug\". Mes"
  },
  {
   "scenario": "S13",
   "check": "module not left half-installed",
   "pass": false,
-  "detail": "{'id_module': '70', 'version': '3.4.0', 'active': '1'}"
+  "detail": "{'id_module': '71', 'version': '3.4.0', 'active': '1'}"
  },
  {
   "scenario": "S13",
   "check": "no active module carrier left behind",
   "pass": false,
-  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '0', 'active': '1'}]"
  },
  {
   "scenario": "S13",
@@ -465,13 +465,13 @@
   "scenario": "S13",
   "check": "exactly 1 active module carrier",
   "pass": true,
-  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '0', 'active': '1'}]"
  },
  {
   "scenario": "S13",
   "check": "at most 1 module carrier row",
   "pass": true,
-  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '1'}]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '0', 'active': '1'}]"
  },
  {
   "scenario": "S14",
@@ -483,13 +483,13 @@
   "scenario": "S14",
   "check": "no data lost",
   "pass": true,
-  "detail": "{'everpsclickandcollect': 16, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
+  "detail": "{'everpsclickandcollect': 6, 'everpsclickandcollect_store_stock': 3, 'everpsclickandcollect_store': 5}"
  },
  {
   "scenario": "S15",
   "check": "at most one store address per order",
   "pass": false,
-  "detail": "{'before': 52, 'after': 55, 'errors': []}"
+  "detail": "{'before': 12, 'after': 15, 'errors': []}"
  },
  {
   "scenario": "S16",
@@ -501,18 +501,18 @@
   "scenario": "S17",
   "check": "carrier switched off by the merchant stays off",
   "pass": true,
-  "detail": "{'3.4.0': True} [{'id_carrier': '7', 'id_reference': '7', 'deleted': '0', 'active': '0'}]"
+  "detail": "{'3.4.0': True} [{'id_carrier': '6', 'id_reference': '6', 'deleted': '0', 'active': '0'}]"
  },
  {
   "scenario": "S17",
   "check": "carrier deleted by the merchant is not re-created",
   "pass": true,
-  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '1', 'active': '0'}]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '1', 'active': '0'}]"
  },
  {
   "scenario": "S17",
   "check": "disable deactivates every carrier of the module",
   "pass": false,
-  "detail": "[{'id_carrier': '7', 'id_reference': '7', 'deleted': '1', 'active': '1'}, {'id_carrier': '8', 'id_reference': '7', 'deleted': '0', 'active': '1'}, {'id_carrier': '9', 'id_reference': '107', 'deleted': '0', 'active': '1'}]"
+  "detail": "[{'id_carrier': '6', 'id_reference': '6', 'deleted': '1', 'active': '1'}, {'id_carrier': '7', 'id_reference': '6', 'deleted': '0', 'active': '1'}, {'id_carrier': '8', 'id_reference': '106', 'deleted': '0', 'active': '1'}]"
  }
 ]

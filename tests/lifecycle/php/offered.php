@@ -5,6 +5,12 @@ $idCart = (int) Db::getInstance()->getValue('SELECT id_cart FROM ' . _DB_PREFIX_
 $cart = new Cart($idCart);
 Context::getContext()->cart = $cart;
 Context::getContext()->customer = new Customer($cart->id_customer);
+// PrestaShop 9 needs a service container to compute carriers outside of a request
+if (version_compare(_PS_VERSION_, '9.0.0', '>=') && !isset(Context::getContext()->container)) {
+    $kernel = new FrontKernel('prod', false);
+    $kernel->boot();
+    Context::getContext()->container = $kernel->getContainer();
+}
 $ids = array();
 foreach ($cart->getDeliveryOptionList(null, true) as $options) {
     foreach ($options as $o) {

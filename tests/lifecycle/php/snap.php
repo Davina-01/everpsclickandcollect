@@ -25,4 +25,14 @@ $out['text_t2_lang1'] = $db->getValue("SELECT cl.value FROM {$p}configuration_la
 $out['tabs'] = array_column($db->executeS("SELECT class_name FROM {$p}tab WHERE module='" . LC_MODULE . "' ORDER BY class_name"), 'class_name');
 $out['hooks'] = $out['module'] ? array_column($db->executeS("SELECT h.name FROM {$p}hook_module hm JOIN {$p}hook h ON h.id_hook = hm.id_hook WHERE hm.id_module = " . (int) $out['module']['id_module'] . ' ORDER BY h.name'), 'name') : array();
 $out['addresses'] = (int) $db->getValue("SELECT COUNT(*) FROM {$p}address");
+// PrestaShop 9 returns typed values: compare everything as strings like PrestaShop 8
+foreach (array('module', 'carriers') as $key) {
+    if (is_array($out[$key])) {
+        array_walk_recursive($out[$key], function (&$v) {
+            if ($v !== null) {
+                $v = (string) (is_bool($v) ? (int) $v : $v);
+            }
+        });
+    }
+}
 echo json_encode($out, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";
