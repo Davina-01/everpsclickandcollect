@@ -29,8 +29,6 @@ class EverpsclickandcollectInstaller
         'displayAdminOrderMain',
         'displayPDFDeliverySlip',
         'actionValidateStepComplete',
-        'actionOrderGridDefinitionModifier',
-        'actionOrderGridQueryBuilderModifier',
         'actionEmailSendBefore',
         'actionUpdateQuantity',
         'actionCarrierUpdate',
@@ -46,6 +44,8 @@ class EverpsclickandcollectInstaller
     const OBSOLETE_HOOKS = array(
         'displayAdminOrder', // replaced by displayAdminOrderMain (3.2.0)
         'displayPDFInvoice', // pickup information is printed on delivery slips only (3.4.0)
+        'actionOrderGridDefinitionModifier', // "Pickup" column of the order list removed (3.4.7)
+        'actionOrderGridQueryBuilderModifier',
     );
 
     /** Hidden back office page used to change the pickup time of an order */

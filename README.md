@@ -43,7 +43,6 @@ Both rules can be switched off. The customer sees the warning box while choosing
 
 - **Order page**: "Click & collect pickup" block with the store, the pickup choice (`Pick up now · Ordered at …` or `Pick up later · Fri 9 Oct 14:00–17:00 / …`) and a **Prepare on arrival** badge.
 - **Change pickup time** on the order page (e.g. the customer asked on WhatsApp to come another day). Any date can be set; "Prepare on arrival" is recalculated.
-- **Order list**: "Pickup" column, filterable by date (type `2026-10-09`).
 - **Delivery slip** (PDF used to prepare the order): pickup choice and a "Prepare on arrival" line. Nothing is printed on **invoices**.
 - **Emails**: the pickup choice is added after the carrier name in the order emails; the optional email sent to the store also contains it.
 
@@ -126,7 +125,7 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 
 - Pickup choices are stored in `ps_everpsclickandcollect` (one row per cart): `pickup_mode` (`now` / `later`), `pickup_periods` (JSON), `pickup_prepare`, `pickup_summary`, plus the original `id_store`, `delivery_date`, `delivery_hour` columns (`delivery_hour` also receives the periods in the 3.3.0 format, so a downgrade still shows them).
 - Lifecycle code: `lifecycle/` – `EverpsclickandcollectSchema` (tables), `EverpsclickandcollectCarrierManager` (carrier), `EverpsclickandcollectMigrator` (settings of older versions), `EverpsclickandcollectInstaller` (install / repair / uninstall / delete all data / enable / disable).
-- Hooks: `displayCarrierExtraContent`, `actionValidateStepComplete` (blocks "Continue"), `displayOrderConfirmation`, `displayAdminOrderMain`, `displayPDFDeliverySlip`, `actionEmailSendBefore`, `actionOrderGridDefinitionModifier`, `actionOrderGridQueryBuilderModifier`.
+- Hooks: `displayCarrierExtraContent`, `actionValidateStepComplete` (blocks "Continue"), `displayOrderConfirmation`, `displayAdminOrderMain`, `displayPDFDeliverySlip`, `actionEmailSendBefore`.
 - A hidden back office controller (`AdminEverPsClickAndCollectPickup`) saves the pickup time changed by the staff.
 - PrestaShop 9 bundles theme CSS in a cache: after updating the module, clear the cache (Advanced parameters → Performance → Clear cache) so the new styles are used.
 - The per-store stock field of the original module uses the old product page hook (`displayAdminProductsQuantitiesStepBottom`), which the new product page of PrestaShop 8.1+ and PrestaShop 9 no longer displays. Store stock can still be imported / exported as CSV.
@@ -134,6 +133,7 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 
 ### Changelog
 
+- **3.4.7** – "Pickup" column removed from the order list (the pickup time is on the order page, the delivery slip and in the emails).
 - **3.4.6** – Upgrades uploaded through the back office are finished automatically on the next back office page; configuration page warnings (module carrier disabled or deleted, no store selected, another "Click and collect" carrier active).
 - **3.4.5** – The 4 notes (NOTE, T2, T3, T1) are now one text "Notes" (one note per line, first line = title) with one switch; existing texts are merged automatically on upgrade (a note that was switched off is left out). Shorter explanations on the settings page.
 - **3.4.4** – Settings page: one switch for the 4 notes (NOTE, T2, T3, T1); each switch explains where and when its text appears.

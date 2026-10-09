@@ -34,10 +34,10 @@ function upgrade_module_3_2_0($module)
         MODIFY `delivery_hour` text DEFAULT NULL'
     );
     $module->unregisterHook('displayAdminOrder');
+    // The order list column (actionOrderGrid* hooks) was removed in 3.4.7: not registered any more.
+    // PrestaShop 9 refuses to register a hook whose method does not exist.
 
     return $module->registerHook('displayAdminOrderMain')
         && $module->registerHook('actionValidateStepComplete')
-        && $module->registerHook('actionOrderGridDefinitionModifier')
-        && $module->registerHook('actionOrderGridQueryBuilderModifier')
         && $module->installSlotDefaults();
 }

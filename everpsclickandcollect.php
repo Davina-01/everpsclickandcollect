@@ -46,7 +46,7 @@ class Everpsclickandcollect extends CarrierModule
     {
         $this->name = 'everpsclickandcollect';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.4.6';
+        $this->version = '3.4.7';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -2172,71 +2172,6 @@ class Everpsclickandcollect extends CarrierModule
     public function hookDisplayPDFDeliverySlip($params)
     {
         return $this->renderPickupInfo(new Order((int) $params['object']->id_order), 'delivery_slip.tpl', true);
-    }
-
-    /**
-     * Back office order list: add a "Pickup" column, filterable by date (e.g. 2026-10-09)
-     */
-    public function hookActionOrderGridDefinitionModifier($params)
-    {
-        $definition = $params['definition'];
-        $columnClass = class_exists('PrestaShop\PrestaShop\Core\Grid\Column\Type\Common\DataColumn')
-            ? 'PrestaShop\PrestaShop\Core\Grid\Column\Type\Common\DataColumn'
-            : 'PrestaShop\PrestaShop\Core\Grid\Column\Type\DataColumn';
-        $column = new $columnClass('evercnc_pickup');
-        $column->setName($this->l('Pickup'))
-            ->setOptions(array(
-                'field' => 'evercnc_pickup',
-                'sortable' => false,
-            ));
-        $definition->getColumns()->addAfter('date_add', $column);
-        $filter = new PrestaShop\PrestaShop\Core\Grid\Filter\Filter(
-            'evercnc_pickup',
-            'Symfony\Component\Form\Extension\Core\Type\TextType'
-        );
-        $filter->setTypeOptions(array(
-            'required' => false,
-            'attr' => array('placeholder' => 'YYYY-MM-DD'),
-        ))->setAssociatedColumn('evercnc_pickup');
-        $definition->getFilters()->add($filter);
-    }
-
-    public function hookActionOrderGridQueryBuilderModifier($params)
-    {
-        $filters = $params['search_criteria']->getFilters();
-        foreach (array('search_query_builder', 'count_query_builder') as $key) {
-            if (!isset($params[$key])) {
-                continue;
-            }
-            $qb = $params[$key];
-            $qb->leftJoin(
-                'o',
-                _DB_PREFIX_ . 'everpsclickandcollect',
-                'evercnc',
-                'evercnc.id_cart = o.id_cart AND o.id_carrier IN (' . EverpsclickandcollectCarrierManager::getIdsSql() . ')'
-            );
-            if ($key === 'search_query_builder') {
-                $legacy = 'IF(evercnc.delivery_hour LIKE \'____-__-__ %\', '
-                    . 'REPLACE(evercnc.delivery_hour, \',\', \' | \'), '
-                    . 'TRIM(CONCAT(IFNULL(evercnc.delivery_date, \'\'), \' \', IFNULL(REPLACE(evercnc.delivery_hour, \',\', \' \'), \'\')))'
-                    . ')';
-                $qb->addSelect(
-                    'CONCAT(CASE evercnc.pickup_mode'
-                    . ' WHEN \'now\' THEN :evercnc_now'
-                    . ' WHEN \'later\' THEN CONCAT(:evercnc_later, \' · \', IF(IFNULL(evercnc.pickup_summary, \'\') = \'\', :evercnc_none, evercnc.pickup_summary))'
-                    . ' ELSE ' . $legacy . ' END,'
-                    . ' IF(evercnc.pickup_prepare = 0, CONCAT(\' · \', :evercnc_flag), \'\')) AS evercnc_pickup'
-                )
-                    ->setParameter('evercnc_now', $this->l('Pick up now'))
-                    ->setParameter('evercnc_later', $this->l('Pick up later'))
-                    ->setParameter('evercnc_none', $this->l('No time given'))
-                    ->setParameter('evercnc_flag', $this->l('Prepare on arrival'));
-            }
-            if (isset($filters['evercnc_pickup']) && $filters['evercnc_pickup'] !== '') {
-                $qb->andWhere('evercnc.delivery_date LIKE :evercnc_pickup')
-                    ->setParameter('evercnc_pickup', '%' . $filters['evercnc_pickup'] . '%');
-            }
-        }
     }
 
     public function getTemplateVarStores()
