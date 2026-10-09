@@ -46,7 +46,7 @@ class Everpsclickandcollect extends CarrierModule
     {
         $this->name = 'everpsclickandcollect';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.4.1';
+        $this->version = '3.4.2';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -1656,7 +1656,7 @@ class Everpsclickandcollect extends CarrierModule
      *   'title' => 'Pick up now' / 'Pick up later',
      *   'lines' => ['10月8日 周四 17:00–19:00', ...],
      *   'prepare' => bool,
-     *   'text' => customer one-liner, 'admin_text' => "B · ..." one-liner with the "prepare on arrival" flag
+     *   'text' => customer one-liner, 'admin_text' => "Pick up later · ..." one-liner with the "prepare on arrival" flag
      * ]
      */
     public function getPickupInfo($row, $idLang = null, $orderDate = null)
@@ -1678,7 +1678,6 @@ class Everpsclickandcollect extends CarrierModule
                         $this->formatPickupDate(date('Y-m-d', $time), $idLang) . ' ' . date('H:i', $time)
                     );
                 }
-                $letter = 'A';
             } else {
                 $info['title'] = $this->translateIn('Pick up later', $idLang);
                 foreach ($P::decodePeriods($row['pickup_periods']) as $p) {
@@ -1688,10 +1687,9 @@ class Everpsclickandcollect extends CarrierModule
                 if (!$info['lines']) {
                     $info['lines'][] = $this->translateIn('No time given', $idLang);
                 }
-                $letter = 'B';
             }
             $info['text'] = $info['title'] . ($info['lines'] ? ' : ' . implode(' / ', $info['lines']) : '');
-            $info['admin_text'] = $letter . ' · ' . ($letter === 'A' ? $info['title'] . ($info['lines'] ? ' · ' . $info['lines'][0] : '') : implode(' / ', $info['lines']))
+            $info['admin_text'] = $info['title'] . ($info['lines'] ? ' · ' . implode(' / ', $info['lines']) : '')
                 . ($info['prepare'] ? '' : ' · ' . $this->translateIn('Prepare on arrival', $idLang));
             return $info;
         }
@@ -2142,12 +2140,13 @@ class Everpsclickandcollect extends CarrierModule
                     . ')';
                 $qb->addSelect(
                     'CONCAT(CASE evercnc.pickup_mode'
-                    . ' WHEN \'now\' THEN CONCAT(\'A · \', :evercnc_now)'
-                    . ' WHEN \'later\' THEN CONCAT(\'B · \', IF(IFNULL(evercnc.pickup_summary, \'\') = \'\', :evercnc_none, evercnc.pickup_summary))'
+                    . ' WHEN \'now\' THEN :evercnc_now'
+                    . ' WHEN \'later\' THEN CONCAT(:evercnc_later, \' · \', IF(IFNULL(evercnc.pickup_summary, \'\') = \'\', :evercnc_none, evercnc.pickup_summary))'
                     . ' ELSE ' . $legacy . ' END,'
                     . ' IF(evercnc.pickup_prepare = 0, CONCAT(\' · \', :evercnc_flag), \'\')) AS evercnc_pickup'
                 )
                     ->setParameter('evercnc_now', $this->l('Pick up now'))
+                    ->setParameter('evercnc_later', $this->l('Pick up later'))
                     ->setParameter('evercnc_none', $this->l('No time given'))
                     ->setParameter('evercnc_flag', $this->l('Prepare on arrival'));
             }

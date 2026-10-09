@@ -51,8 +51,8 @@
             <summary class="btn btn-outline-secondary btn-sm">{l s='Change pickup time' mod='everpsclickandcollect'}</summary>
             <form method="post" action="{$pickup_edit_url|escape:'htmlall':'UTF-8'}" class="mt-3">
                 <div class="form-group">
-                    <label class="mr-3"><input type="radio" name="evercnc_mode" value="now"{if $pickup_edit_mode == 'now'} checked{/if}> A · {l s='Pick up now' mod='everpsclickandcollect'}</label>
-                    <label><input type="radio" name="evercnc_mode" value="later"{if $pickup_edit_mode != 'now'} checked{/if}> B · {l s='Pick up later' mod='everpsclickandcollect'}</label>
+                    <label class="mr-3"><input type="radio" name="evercnc_mode" value="now"{if $pickup_edit_mode == 'now'} checked{/if}> {l s='Pick up now' mod='everpsclickandcollect'}</label>
+                    <label><input type="radio" name="evercnc_mode" value="later"{if $pickup_edit_mode != 'now'} checked{/if}> {l s='Pick up later' mod='everpsclickandcollect'}</label>
                 </div>
                 <p class="text-muted small mb-2">{l s='For "Pick up later": 1 to 3 time periods, leave a line empty to remove it.' mod='everpsclickandcollect'}</p>
                 {foreach from=$pickup_edit_periods item=p key=i}

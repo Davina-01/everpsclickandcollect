@@ -41,7 +41,7 @@ Both rules can be switched off. The customer sees the warning box T6 while choos
 
 ### Back office
 
-- **Order page**: "Click & collect pickup" block with the store, the pickup choice (`A · Pick up now · Ordered at …` or `B · Fri 9 Oct 14:00–17:00 / …`) and a **Prepare on arrival** badge.
+- **Order page**: "Click & collect pickup" block with the store, the pickup choice (`Pick up now · Ordered at …` or `Pick up later · Fri 9 Oct 14:00–17:00 / …`) and a **Prepare on arrival** badge.
 - **Change pickup time** on the order page (e.g. the customer asked on WhatsApp to come another day). Any date can be set; "Prepare on arrival" is recalculated.
 - **Order list**: "Pickup" column, filterable by date (type `2026-10-09`).
 - **Delivery slip** (PDF used to prepare the order): pickup choice and a "Prepare on arrival" line. Nothing is printed on **invoices**.
@@ -135,6 +135,7 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 
 ### Changelog
 
+- **3.4.2** – Back office shows "Pick up now" / "Pick up later" instead of the letters A / B.
 - **3.4.1** – Lifecycle fixes (see [AUDIT.md](AUDIT.md)): uninstall and reset keep the data and never delete the carrier; explicit "Delete all module data" action; disabled module = carrier not offered; orders keep their pickup information after the carrier is edited; failed installs roll back and failed upgrades can be retried, enabling the module repairs them; upgrades from 2.x fixed; no duplicate carrier, store row or store address; declared compatibility PrestaShop 8.0.0 – 9.x.
 - **3.4.0** – "Pick up now / Pick up later" with up to 3 prefilled periods; pickup hours per week day and part-day closures; "Prepare on arrival" rules; editable notes and warning box; WhatsApp link; color settings; staff can change the pickup time; delivery slip only (no invoice).
 - **3.3.0** – Tabbed time slot picker, slots on several days, morning / afternoon mode.
