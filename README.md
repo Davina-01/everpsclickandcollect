@@ -105,7 +105,7 @@ The audit of these scenarios and the test runner are in [AUDIT.md](AUDIT.md) and
 | Main color | `#1b82d6` | Selected choices, buttons, links |
 | Warning box color | `#e8a33d` | Border of the warning box, background is a light shade |
 | Notes text color | `#5f6f82` | Small notes |
-| Texts NOTE, T2, T3, T1, T6 | see below | Editable per language (French by default), each can be switched off |
+| Texts NOTE, T2, T3, T1, T6 | see below | Editable per language (French by default). One switch for the 4 notes, one for T6 |
 
 Checks when saving: valid ranges without overlap, minutes on the minute step, closing time not earlier than the latest pickup time, valid exception lines, colors `#rrggbb`, WhatsApp link as a full address. A warning is shown when the maximum total time is longer than a day of pickup hours (the rule can then only apply to several days).
 
@@ -135,6 +135,7 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 
 ### Changelog
 
+- **3.4.4** – Settings page: one switch for the 4 notes (NOTE, T2, T3, T1); each switch explains where and when its text appears.
 - **3.4.3** – Settings page: texts grouped in the order the customer sees them (notes, then warning box), the condition shown once per group, and each switch says what the text is ("Show text T1: last note").
 - **3.4.2** – Back office shows "Pick up now" / "Pick up later" instead of the letters A / B.
 - **3.4.1** – Lifecycle fixes (see [AUDIT.md](AUDIT.md)): uninstall and reset keep the data and never delete the carrier; explicit "Delete all module data" action; disabled module = carrier not offered; orders keep their pickup information after the carrier is edited; failed installs roll back and failed upgrades can be retried, enabling the module repairs them; upgrades from 2.x fixed; no duplicate carrier, store row or store address; declared compatibility PrestaShop 8.0.0 – 9.x.

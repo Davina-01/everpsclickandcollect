@@ -39,6 +39,8 @@ class Everpsclickandcollect extends CarrierModule
     private $postWarnings = array();
     public $siteUrl;
     public $isSeven;
+    /** Small notes below the pickup time, in display order (one switch for all of them) */
+    const NOTE_CODES = array('NOTE', 'T2', 'T3', 'T1');
     /** @var bool true while PrestaShop's own install / uninstall code runs (it calls enable() / disable()) */
     protected $lifecycleBusy = false;
 
@@ -46,7 +48,7 @@ class Everpsclickandcollect extends CarrierModule
     {
         $this->name = 'everpsclickandcollect';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.4.3';
+        $this->version = '3.4.4';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -879,32 +881,31 @@ class Everpsclickandcollect extends CarrierModule
                 'name' => 'EVERPSCLICKANDCOLLECT_COLOR_NOTES',
             ),
         ));
-        // Texts in the order the customer sees them; the condition is shown once per group
-        $groups = array(
-            'NOTE' => array($this->l('Notes below the pickup time'), $this->l('Shown to all customers, in this order.')),
-            'T6' => array($this->l('Warning box'), $this->l('Shown only when the time range is too wide (dates too far apart or total time too long).')),
+        // Texts in the order the customer sees them. NOTE, T2, T3, T1 share one switch.
+        $descriptions = $this->getTextDescriptions();
+        $inputs[] = array(
+            'type' => 'switch',
+            'label' => $this->l('Show the notes (texts NOTE, T2, T3, T1)'),
+            'desc' => $this->l('Where: checkout, "Shipping method" step, in the click & collect block, below the pickup time choice. When: always, for every customer who chooses click & collect (with "Pick up now" or "Pick up later"), if "Ask for pickup time" is on. The 4 texts below are shown in this order; an empty text is not shown.'),
+            'name' => 'EVERPSCLICKANDCOLLECT_NOTES_ON',
+            'is_bool' => true,
+            'values' => $yesNo,
         );
-        foreach ($this->getTextDescriptions() as $code => $what) {
-            if (isset($groups[$code])) {
+        foreach (array('NOTE', 'T2', 'T3', 'T1', 'T6') as $code) {
+            if ($code === 'T6') {
                 $inputs[] = array(
-                    'type' => 'html',
-                    'label' => '',
-                    'name' => 'evercnc_texts_' . Tools::strtolower($code),
-                    'html_content' => '<h4 style="margin:15px 0 0">' . Tools::safeOutput($groups[$code][0]) . '</h4>'
-                        . '<p class="help-block">' . Tools::safeOutput($groups[$code][1]) . '</p>',
+                    'type' => 'switch',
+                    'label' => sprintf($this->l('Show text %1$s: %2$s'), $code, $descriptions[$code]),
+                    'desc' => $this->l('Where: checkout, "Shipping method" step, in a rounded box below the pickup periods. When: only if the customer chooses "Pick up later" and the time range is too wide (dates too far apart or total time too long, see the "Do not prepare" settings above): the order will probably be prepared on arrival.'),
+                    'name' => 'EVERPSCLICKANDCOLLECT_TEXT_T6_ON',
+                    'is_bool' => true,
+                    'values' => $yesNo,
                 );
             }
             $inputs[] = array(
-                'type' => 'switch',
-                'label' => sprintf($this->l('Show text %1$s: %2$s'), $code, $what),
-                'name' => 'EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON',
-                'is_bool' => true,
-                'values' => $yesNo,
-            );
-            $inputs[] = array(
                 'type' => 'textarea',
                 'lang' => true,
-                'label' => sprintf($this->l('Text %s'), $code),
+                'label' => sprintf($this->l('Text %1$s: %2$s'), $code, $descriptions[$code]),
                 'desc' => $variables,
                 'name' => 'EVERPSCLICKANDCOLLECT_TEXT_' . $code,
                 'autoload_rte' => false,
@@ -951,6 +952,11 @@ class Everpsclickandcollect extends CarrierModule
             'EVERPSCLICKANDCOLLECT_CLOSED_DATES',
             Configuration::get('EVERPSCLICKANDCOLLECT_CLOSED_DATES')
         );
+        $notesOn = false;
+        foreach (self::NOTE_CODES as $code) {
+            $notesOn = $notesOn || Configuration::get('EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON') !== '0';
+        }
+        $values['EVERPSCLICKANDCOLLECT_NOTES_ON'] = Tools::getValue('EVERPSCLICKANDCOLLECT_NOTES_ON', $notesOn ? 1 : 0);
         foreach (array_keys($this->getDefaultTexts()) as $code) {
             $key = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
             $values[$key . '_ON'] = Tools::getValue($key . '_ON', Configuration::get($key . '_ON'));
@@ -1096,7 +1102,9 @@ class Everpsclickandcollect extends CarrierModule
         Configuration::updateValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES', implode("\n", array_unique($lines)));
         foreach (array_keys($this->getDefaultTexts()) as $code) {
             $key = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
-            Configuration::updateValue($key . '_ON', (int) Tools::getValue($key . '_ON'));
+            // The 4 notes have one switch
+            $switch = in_array($code, self::NOTE_CODES, true) ? 'EVERPSCLICKANDCOLLECT_NOTES_ON' : $key . '_ON';
+            Configuration::updateValue($key . '_ON', (int) Tools::getValue($switch));
             $texts = array();
             foreach (Language::getLanguages(false) as $lang) {
                 $texts[(int) $lang['id_lang']] = trim((string) Tools::getValue($key . '_' . $lang['id_lang']));
