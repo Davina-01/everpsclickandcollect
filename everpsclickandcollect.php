@@ -46,7 +46,7 @@ class Everpsclickandcollect extends CarrierModule
     {
         $this->name = 'everpsclickandcollect';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.4.2';
+        $this->version = '3.4.3';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -879,11 +879,24 @@ class Everpsclickandcollect extends CarrierModule
                 'name' => 'EVERPSCLICKANDCOLLECT_COLOR_NOTES',
             ),
         ));
-        foreach ($this->getTextDescriptions() as $code => $when) {
+        // Texts in the order the customer sees them; the condition is shown once per group
+        $groups = array(
+            'NOTE' => array($this->l('Notes below the pickup time'), $this->l('Shown to all customers, in this order.')),
+            'T6' => array($this->l('Warning box'), $this->l('Shown only when the time range is too wide (dates too far apart or total time too long).')),
+        );
+        foreach ($this->getTextDescriptions() as $code => $what) {
+            if (isset($groups[$code])) {
+                $inputs[] = array(
+                    'type' => 'html',
+                    'label' => '',
+                    'name' => 'evercnc_texts_' . Tools::strtolower($code),
+                    'html_content' => '<h4 style="margin:15px 0 0">' . Tools::safeOutput($groups[$code][0]) . '</h4>'
+                        . '<p class="help-block">' . Tools::safeOutput($groups[$code][1]) . '</p>',
+                );
+            }
             $inputs[] = array(
                 'type' => 'switch',
-                'label' => sprintf($this->l('Show text %s'), $code),
-                'desc' => $when,
+                'label' => sprintf($this->l('Show text %1$s: %2$s'), $code, $what),
                 'name' => 'EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON',
                 'is_bool' => true,
                 'values' => $yesNo,
@@ -911,11 +924,11 @@ class Everpsclickandcollect extends CarrierModule
     public function getTextDescriptions()
     {
         return array(
-            'NOTE' => $this->l('Title of the small notes below the pickup time (all customers)'),
-            'T2' => $this->l('Note below the title (all customers)'),
-            'T3' => $this->l('Second note (all customers)'),
-            'T1' => $this->l('Last note (all customers)'),
-            'T6' => $this->l('Warning box: time range too wide (dates too far apart or total time too long)'),
+            'NOTE' => $this->l('title of the notes'),
+            'T2' => $this->l('first note'),
+            'T3' => $this->l('second note'),
+            'T1' => $this->l('last note'),
+            'T6' => $this->l('warning text'),
         );
     }
 

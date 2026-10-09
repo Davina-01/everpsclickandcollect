@@ -135,6 +135,7 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 
 ### Changelog
 
+- **3.4.3** – Settings page: texts grouped in the order the customer sees them (notes, then warning box), the condition shown once per group, and each switch says what the text is ("Show text T1: last note").
 - **3.4.2** – Back office shows "Pick up now" / "Pick up later" instead of the letters A / B.
 - **3.4.1** – Lifecycle fixes (see [AUDIT.md](AUDIT.md)): uninstall and reset keep the data and never delete the carrier; explicit "Delete all module data" action; disabled module = carrier not offered; orders keep their pickup information after the carrier is edited; failed installs roll back and failed upgrades can be retried, enabling the module repairs them; upgrades from 2.x fixed; no duplicate carrier, store row or store address; declared compatibility PrestaShop 8.0.0 – 9.x.
 - **3.4.0** – "Pick up now / Pick up later" with up to 3 prefilled periods; pickup hours per week day and part-day closures; "Prepare on arrival" rules; editable notes and warning box; WhatsApp link; color settings; staff can change the pickup time; delivery slip only (no invoice).

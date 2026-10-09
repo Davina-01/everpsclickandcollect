@@ -316,3 +316,13 @@ $_MODULE['<{everpsclickandcollect}prestashop>purge_2d68b7662dbecb7034f7a4b7d7ac3
 $_MODULE['<{everpsclickandcollect}prestashop>purge_66e033033c7c528c0c9a0ecc438e48ff'] = 'Je comprends que ces données seront supprimées définitivement.';
 $_MODULE['<{everpsclickandcollect}prestashop>purge_7df3f792d2f290b4440feb6b71c6ed62'] = 'Tapez DELETE pour confirmer';
 $_MODULE['<{everpsclickandcollect}prestashop>purge_2b6e890e8a3c440c6e6021f66c241f02'] = 'Supprimer toutes les données du module et désinstaller';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_1a81dd8b79d9924686165c495e8602b1'] = 'Afficher le texte %1$s : %2$s';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_b34eb0cba11568422780e8efc61876f8'] = 'Notes sous l\'heure de retrait';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_2297770e7404a600bee9ef5f20356bdb'] = 'Affichées à tous les clients, dans cet ordre.';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_5baafd4c6e493c83951f974760d69a3a'] = 'Cadre d\'avertissement';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_21b900bb9a574f80fd56ce5c4ed7ad70'] = 'Affiché uniquement quand la plage horaire est trop large (dates trop éloignées ou durée totale trop longue).';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_aca9e1b3ba30f172a2354bf70c2276ce'] = 'titre des notes';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_888f3c1502dee6ea1a024f38a90d9c00'] = 'première note';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_4ca3750e3a63f113ad13e1390e94b3be'] = 'deuxième note';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_53dc5d6dbf1d1bc42343e2aa65766af6'] = 'dernière note';
+$_MODULE['<{everpsclickandcollect}prestashop>everpsclickandcollect_ca284a0ea648fdac23914e71df8007ab'] = 'texte d\'avertissement';
