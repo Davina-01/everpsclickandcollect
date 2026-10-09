@@ -24,8 +24,8 @@ Declared for **PrestaShop 8.0.0 – 9.x**. Tested on **8.2.0** (classic theme) a
      - times cannot be left empty (an empty time would mean "any time");
      - today and tomorrow are shown as **Today / Tomorrow** (*Aujourd'hui / Demain*), other days as `ven. 9 oct.`;
      - overlapping or touching periods of the same day are merged (`14:00–16:00` + `15:00–17:00` → `14:00–17:00`).
-3. **Warning box T6** (rounded box) when the time range is too wide and the order will probably **not be prepared in advance** (see *Prepare on arrival* below).
-4. **Small notes** below the pickup time, for every customer (title, then **T2**, **T3**, and **T1** last). A `{whatsapp}` variable shows a clickable WhatsApp link.
+3. **Warning box** (rounded box) when the time range is too wide and the order will probably **not be prepared in advance** (see *Prepare on arrival* below).
+4. **Notes** below the pickup time, for every customer: one text, one note per line, the first line is shown as a title. A `{whatsapp}` variable shows a clickable WhatsApp link.
 5. Pressing **Continue** checks everything again on the server: no choice, no period, past time, time outside the pickup hours… are refused with a clear message.
 
 ### Prepare on arrival
@@ -37,7 +37,7 @@ Declared for **PrestaShop 8.0.0 – 9.x**. Tested on **8.2.0** (classic theme) a
 | First and last dates more than *N* days apart | on, N = 1 | Thu + Fri → prepared · Thu + Sat → prepare on arrival |
 | Total time of the merged periods longer than *N* hours | on, N = 6 | 12:00–18:00 → prepared · 10:30–19:00 → prepare on arrival |
 
-Both rules can be switched off. The customer sees the warning box T6 while choosing.
+Both rules can be switched off. The customer sees the warning box while choosing.
 
 ### Back office
 
@@ -95,7 +95,7 @@ The audit of these scenarios and the test runner are in [AUDIT.md](AUDIT.md) and
 |---|---|---|
 | Pickup hours: Monday … Sunday | 10:30-19:00 Mon–Sat, Sunday empty | One or several ranges per day, e.g. `10:30-14:00, 16:00-19:00`. Empty = no pickup that day. Independent from the store opening hours |
 | No pickup on these dates | — | One per line. Whole day `2026-12-25`, part of a day `2026-12-24 14:00-19:00` |
-| Closing time | 19:30 | Only used in text T1 (`{closing}`) |
+| Closing time | 19:30 | Only used in the notes (`{closing}`) |
 | Minute step | 15 | 5 / 10 / 15 / 20 / 30 / 60 |
 | "Pick up now" time limit | 30 min | Shown in the "Pick up now" description |
 | Bookable pickup days | 6 | Today and the next pickup days (days without pickup are not counted) |
@@ -105,19 +105,16 @@ The audit of these scenarios and the test runner are in [AUDIT.md](AUDIT.md) and
 | Main color | `#1b82d6` | Selected choices, buttons, links |
 | Warning box color | `#e8a33d` | Border of the warning box, background is a light shade |
 | Notes text color | `#5f6f82` | Small notes |
-| Texts NOTE, T2, T3, T1, T6 | see below | Editable per language (French by default). One switch for the 4 notes, one for T6 |
+| Notes, Warning | see below | Editable per language (French by default), one switch each |
 
 Checks when saving: valid ranges without overlap, minutes on the minute step, closing time not earlier than the latest pickup time, valid exception lines, colors `#rrggbb`, WhatsApp link as a full address. A warning is shown when the maximum total time is longer than a day of pickup hours (the rule can then only apply to several days).
 
 ### Texts
 
-| Code | Where | Default (French) |
+| Text | Where | Default (French) |
 |---|---|---|
-| NOTE | Title of the small notes | Merci de respecter l'horaire choisi. |
-| T2 | Note | L'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée. |
-| T3 | Note | Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d'horaire, laissez-nous un message sur {whatsapp}. |
-| T1 | Last note | Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l'avance sur {whatsapp} : un collègue restera au magasin pour vous attendre. |
-| T6 | Warning box, time range too wide | La plage horaire choisie est large : nous ne préparerons peut-être pas votre commande à l'avance. Merci de votre compréhension. |
+| Notes | Below the pickup time, all customers. One note per line, first line = title | Merci de respecter l'horaire choisi.<br>L'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée.<br>Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d'horaire, laissez-nous un message sur {whatsapp}.<br>Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l'avance sur {whatsapp} : un collègue restera au magasin pour vous attendre. |
+| Warning | Rounded box, only "Pick up later" with a time range too wide | La plage horaire choisie est large : nous ne préparerons peut-être pas votre commande à l'avance. Merci de votre compréhension. |
 
 Variables: `{latest}` latest pickup time of the week · `{closing}` closing time · `{now_limit}` "Pick up now" time limit · `{whatsapp}` WhatsApp link.
 
@@ -135,6 +132,7 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 
 ### Changelog
 
+- **3.4.5** – The 4 notes (NOTE, T2, T3, T1) are now one text "Notes" (one note per line, first line = title) with one switch; existing texts are merged automatically on upgrade (a note that was switched off is left out). Shorter explanations on the settings page.
 - **3.4.4** – Settings page: one switch for the 4 notes (NOTE, T2, T3, T1); each switch explains where and when its text appears.
 - **3.4.3** – Settings page: texts grouped in the order the customer sees them (notes, then warning box), the condition shown once per group, and each switch says what the text is ("Show text T1: last note").
 - **3.4.2** – Back office shows "Pick up now" / "Pick up later" instead of the letters A / B.

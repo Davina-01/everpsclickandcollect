@@ -39,8 +39,6 @@ class Everpsclickandcollect extends CarrierModule
     private $postWarnings = array();
     public $siteUrl;
     public $isSeven;
-    /** Small notes below the pickup time, in display order (one switch for all of them) */
-    const NOTE_CODES = array('NOTE', 'T2', 'T3', 'T1');
     /** @var bool true while PrestaShop's own install / uninstall code runs (it calls enable() / disable()) */
     protected $lifecycleBusy = false;
 
@@ -48,7 +46,7 @@ class Everpsclickandcollect extends CarrierModule
     {
         $this->name = 'everpsclickandcollect';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.4.4';
+        $this->version = '3.4.5';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -230,28 +228,22 @@ class Everpsclickandcollect extends CarrierModule
 
     /**
      * Default customer messages, in display order.
-     * NOTE, T2, T3, T1: small notes below the pickup time (title, then notes, T1 last).
+     * NOTES: small notes below the pickup time, one per line, the first line is the title.
      * T6: "we may not prepare in advance" warning (time range too wide).
      * Variables: {latest} (latest pickup time of the week), {closing}, {now_limit}, {whatsapp} (WhatsApp link)
      */
     public function getDefaultTexts()
     {
         return array(
-            'NOTE' => array(
-                'fr' => 'Merci de respecter l\'horaire choisi.',
-                'en' => 'Please keep to the time you chose.',
-            ),
-            'T2' => array(
-                'fr' => 'L\'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée.',
-                'en' => 'The number of customers in the shop varies, so we cannot guarantee your order will be ready as soon as you arrive.',
-            ),
-            'T3' => array(
-                'fr' => 'Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d\'horaire, laissez-nous un message sur {whatsapp}.',
-                'en' => 'As we are often busy with customers and cannot always answer the phone, please leave us a message on {whatsapp} to change your pickup time.',
-            ),
-            'T1' => array(
-                'fr' => 'Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l\'avance sur {whatsapp} : un collègue restera au magasin pour vous attendre.',
-                'en' => 'To pick up between {latest} and {closing}, choose {latest} and let us know in advance on {whatsapp}: a colleague will stay in the shop for you.',
+            'NOTES' => array(
+                'fr' => "Merci de respecter l'horaire choisi.\n"
+                    . "L'affluence au magasin varie : nous ne pouvons pas garantir que votre commande sera prête dès votre arrivée.\n"
+                    . "Comme nous sommes souvent occupés avec les clients, nous ne pouvons pas toujours répondre au téléphone : pour changer d'horaire, laissez-nous un message sur {whatsapp}.\n"
+                    . "Pour un retrait entre {latest} et {closing}, choisissez {latest} et prévenez-nous à l'avance sur {whatsapp} : un collègue restera au magasin pour vous attendre.",
+                'en' => "Please keep to the time you chose.\n"
+                    . "The number of customers in the shop varies, so we cannot guarantee your order will be ready as soon as you arrive.\n"
+                    . "As we are often busy with customers and cannot always answer the phone, please leave us a message on {whatsapp} to change your pickup time.\n"
+                    . "To pick up between {latest} and {closing}, choose {latest} and let us know in advance on {whatsapp}: a colleague will stay in the shop for you.",
             ),
             'T6' => array(
                 'fr' => 'La plage horaire choisie est large : nous ne préparerons peut-être pas votre commande à l\'avance. Merci de votre compréhension.',
@@ -881,37 +873,41 @@ class Everpsclickandcollect extends CarrierModule
                 'name' => 'EVERPSCLICKANDCOLLECT_COLOR_NOTES',
             ),
         ));
-        // Texts in the order the customer sees them. NOTE, T2, T3, T1 share one switch.
-        $descriptions = $this->getTextDescriptions();
+        // Texts in the order the customer sees them
         $inputs[] = array(
             'type' => 'switch',
-            'label' => $this->l('Show the notes (texts NOTE, T2, T3, T1)'),
-            'desc' => $this->l('Where: checkout, "Shipping method" step, in the click & collect block, below the pickup time choice. When: always, for every customer who chooses click & collect (with "Pick up now" or "Pick up later"), if "Ask for pickup time" is on. The 4 texts below are shown in this order; an empty text is not shown.'),
-            'name' => 'EVERPSCLICKANDCOLLECT_NOTES_ON',
+            'label' => $this->l('Show the notes'),
+            'desc' => $this->l('Checkout, delivery step, below the pickup time. Shown to every click & collect customer.'),
+            'name' => 'EVERPSCLICKANDCOLLECT_TEXT_NOTES_ON',
             'is_bool' => true,
             'values' => $yesNo,
         );
-        foreach (array('NOTE', 'T2', 'T3', 'T1', 'T6') as $code) {
-            if ($code === 'T6') {
-                $inputs[] = array(
-                    'type' => 'switch',
-                    'label' => sprintf($this->l('Show text %1$s: %2$s'), $code, $descriptions[$code]),
-                    'desc' => $this->l('Where: checkout, "Shipping method" step, in a rounded box below the pickup periods. When: only if the customer chooses "Pick up later" and the time range is too wide (dates too far apart or total time too long, see the "Do not prepare" settings above): the order will probably be prepared on arrival.'),
-                    'name' => 'EVERPSCLICKANDCOLLECT_TEXT_T6_ON',
-                    'is_bool' => true,
-                    'values' => $yesNo,
-                );
-            }
-            $inputs[] = array(
-                'type' => 'textarea',
-                'lang' => true,
-                'label' => sprintf($this->l('Text %1$s: %2$s'), $code, $descriptions[$code]),
-                'desc' => $variables,
-                'name' => 'EVERPSCLICKANDCOLLECT_TEXT_' . $code,
-                'autoload_rte' => false,
-                'rows' => 3,
-            );
-        }
+        $inputs[] = array(
+            'type' => 'textarea',
+            'lang' => true,
+            'label' => $this->l('Notes'),
+            'desc' => $this->l('One note per line; the first line is the title.') . ' ' . $variables,
+            'name' => 'EVERPSCLICKANDCOLLECT_TEXT_NOTES',
+            'autoload_rte' => false,
+            'rows' => 7,
+        );
+        $inputs[] = array(
+            'type' => 'switch',
+            'label' => $this->l('Show the warning'),
+            'desc' => $this->l('Checkout, delivery step, box below the time periods. Only for "Pick up later" with a time range that is too wide.'),
+            'name' => 'EVERPSCLICKANDCOLLECT_TEXT_T6_ON',
+            'is_bool' => true,
+            'values' => $yesNo,
+        );
+        $inputs[] = array(
+            'type' => 'textarea',
+            'lang' => true,
+            'label' => $this->l('Warning'),
+            'desc' => $variables,
+            'name' => 'EVERPSCLICKANDCOLLECT_TEXT_T6',
+            'autoload_rte' => false,
+            'rows' => 3,
+        );
 
         return array(
             'form' => array(
@@ -919,17 +915,6 @@ class Everpsclickandcollect extends CarrierModule
                 'input' => $inputs,
                 'submit' => array('title' => $this->l('Save')),
             ),
-        );
-    }
-
-    public function getTextDescriptions()
-    {
-        return array(
-            'NOTE' => $this->l('title of the notes'),
-            'T2' => $this->l('first note'),
-            'T3' => $this->l('second note'),
-            'T1' => $this->l('last note'),
-            'T6' => $this->l('warning text'),
         );
     }
 
@@ -952,11 +937,6 @@ class Everpsclickandcollect extends CarrierModule
             'EVERPSCLICKANDCOLLECT_CLOSED_DATES',
             Configuration::get('EVERPSCLICKANDCOLLECT_CLOSED_DATES')
         );
-        $notesOn = false;
-        foreach (self::NOTE_CODES as $code) {
-            $notesOn = $notesOn || Configuration::get('EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON') !== '0';
-        }
-        $values['EVERPSCLICKANDCOLLECT_NOTES_ON'] = Tools::getValue('EVERPSCLICKANDCOLLECT_NOTES_ON', $notesOn ? 1 : 0);
         foreach (array_keys($this->getDefaultTexts()) as $code) {
             $key = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
             $values[$key . '_ON'] = Tools::getValue($key . '_ON', Configuration::get($key . '_ON'));
@@ -1102,9 +1082,7 @@ class Everpsclickandcollect extends CarrierModule
         Configuration::updateValue('EVERPSCLICKANDCOLLECT_CLOSED_DATES', implode("\n", array_unique($lines)));
         foreach (array_keys($this->getDefaultTexts()) as $code) {
             $key = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
-            // The 4 notes have one switch
-            $switch = in_array($code, self::NOTE_CODES, true) ? 'EVERPSCLICKANDCOLLECT_NOTES_ON' : $key . '_ON';
-            Configuration::updateValue($key . '_ON', (int) Tools::getValue($switch));
+            Configuration::updateValue($key . '_ON', (int) Tools::getValue($key . '_ON'));
             $texts = array();
             foreach (Language::getLanguages(false) as $lang) {
                 $texts[(int) $lang['id_lang']] = trim((string) Tools::getValue($key . '_' . $lang['id_lang']));
@@ -1396,6 +1374,16 @@ class Everpsclickandcollect extends CarrierModule
         foreach (array_keys($this->getDefaultTexts()) as $code) {
             $key = 'EVERPSCLICKANDCOLLECT_TEXT_' . $code;
             $text = Configuration::get($key . '_ON') === '0' ? '' : (string) Configuration::get($key, (int) $idLang);
+            if ($code === 'NOTES') {
+                // One note per line, the first line is the title
+                $texts[$code] = array();
+                foreach (preg_split('/\r\n|\r|\n/', $text) as $line) {
+                    if (trim($line) !== '') {
+                        $texts[$code][] = str_replace('{whatsapp}', $whatsapp, Tools::safeOutput(strtr(trim($line), $vars)));
+                    }
+                }
+                continue;
+            }
             $html = nl2br(Tools::safeOutput(strtr($text, $vars)));
             $texts[$code] = str_replace('{whatsapp}', $whatsapp, $html);
         }

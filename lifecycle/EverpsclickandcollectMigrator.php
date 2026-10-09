@@ -24,6 +24,7 @@ class EverpsclickandcollectMigrator
         self::fromOpenDays();
         self::dropRemovedTexts();
         self::extractWhatsapp();
+        self::mergeNotes();
         return true;
     }
 
@@ -70,6 +71,49 @@ class EverpsclickandcollectMigrator
     protected static function dropRemovedTexts()
     {
         foreach (array('T4', 'T5') as $code) {
+            Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code);
+            Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON');
+        }
+    }
+
+    /**
+     * 3.4.5: the 4 notes NOTE, T2, T3, T1 (one text each) become one text NOTES, one note per line
+     * in the same order. A note that was switched off is left out. Runs only while the old texts exist.
+     */
+    protected static function mergeNotes()
+    {
+        $old = array('NOTE', 'T2', 'T3', 'T1');
+        $names = array();
+        foreach ($old as $code) {
+            $names[] = "'EVERPSCLICKANDCOLLECT_TEXT_" . $code . "'";
+            $names[] = "'EVERPSCLICKANDCOLLECT_TEXT_" . $code . "_ON'";
+        }
+        if (!Db::getInstance()->getValue('SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'configuration` WHERE `name` IN (' . implode(',', $names) . ')')) {
+            return;
+        }
+        if (Configuration::get('EVERPSCLICKANDCOLLECT_TEXT_NOTES_ON') === false) {
+            $values = array();
+            $anyOn = false;
+            foreach (Language::getIDs(false) as $idLang) {
+                $lines = array();
+                foreach ($old as $code) {
+                    if (Configuration::get('EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON') === '0') {
+                        continue;
+                    }
+                    $text = trim(preg_replace('/\s*[\r\n]+\s*/', ' ', (string) Configuration::get('EVERPSCLICKANDCOLLECT_TEXT_' . $code, (int) $idLang)));
+                    if ($text !== '') {
+                        $lines[] = $text;
+                    }
+                }
+                $values[(int) $idLang] = implode("\n", $lines);
+            }
+            foreach ($old as $code) {
+                $anyOn = $anyOn || Configuration::get('EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON') !== '0';
+            }
+            Configuration::updateValue('EVERPSCLICKANDCOLLECT_TEXT_NOTES', $values);
+            Configuration::updateValue('EVERPSCLICKANDCOLLECT_TEXT_NOTES_ON', $anyOn ? 1 : 0);
+        }
+        foreach ($old as $code) {
             Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code);
             Configuration::deleteByName('EVERPSCLICKANDCOLLECT_TEXT_' . $code . '_ON');
         }

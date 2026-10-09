@@ -21,7 +21,8 @@ foreach ($db->executeS("SELECT name, value FROM {$p}configuration WHERE name LIK
     $out['config'][$r['name']] = $r['value'];
 }
 $out['config_lang_rows'] = (int) $db->getValue("SELECT COUNT(*) FROM {$p}configuration_lang cl JOIN {$p}configuration c ON c.id_configuration = cl.id_configuration WHERE c.name LIKE 'EVERPSCLICKANDCOLLECT%'");
-$out['text_t2_lang1'] = $db->getValue("SELECT cl.value FROM {$p}configuration_lang cl JOIN {$p}configuration c ON c.id_configuration = cl.id_configuration WHERE c.name = 'EVERPSCLICKANDCOLLECT_TEXT_T2' AND cl.id_lang = 1");
+// Merchant text used to check that settings survive (NOTES since 3.4.5, T2 before)
+$out['text_t2_lang1'] = $db->getValue("SELECT cl.value FROM {$p}configuration_lang cl JOIN {$p}configuration c ON c.id_configuration = cl.id_configuration WHERE c.name IN ('EVERPSCLICKANDCOLLECT_TEXT_NOTES', 'EVERPSCLICKANDCOLLECT_TEXT_T2') AND cl.id_lang = 1 ORDER BY c.name");
 $out['tabs'] = array_column($db->executeS("SELECT class_name FROM {$p}tab WHERE module='" . LC_MODULE . "' ORDER BY class_name"), 'class_name');
 $out['hooks'] = $out['module'] ? array_column($db->executeS("SELECT h.name FROM {$p}hook_module hm JOIN {$p}hook h ON h.id_hook = hm.id_hook WHERE hm.id_module = " . (int) $out['module']['id_module'] . ' ORDER BY h.name'), 'name') : array();
 $out['addresses'] = (int) $db->getValue("SELECT COUNT(*) FROM {$p}address");

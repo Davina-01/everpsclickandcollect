@@ -169,7 +169,7 @@ class Runner:
         else:  # current: half 3.3.0 slots, half 3.4.0 choices
             self.sql("INSERT INTO ps_everpsclickandcollect (id_cart, id_store, delivery_date, delivery_hour) SELECT id_cart, 1, '2026-10-09,2026-10-12', '2026-10-09 15:00-15:30,2026-10-12 09:00-09:30' FROM ps_orders WHERE id_carrier = {IDC} AND id_order % 2 = 0".replace('{IDC}', idc))
             self.sql("INSERT INTO ps_everpsclickandcollect (id_cart, id_store, delivery_date, pickup_mode, pickup_periods, pickup_prepare, pickup_summary) SELECT id_cart, 1, '2026-10-09', 'later', '[{\"date\":\"2026-10-09\",\"start\":\"14:00\",\"end\":\"17:00\"}]', 1, '2026-10-09 14:00-17:00' FROM ps_orders WHERE id_carrier = {IDC} AND id_order % 2 = 1".replace('{IDC}', idc))
-            self.sql("UPDATE ps_configuration_lang cl JOIN ps_configuration c ON c.id_configuration = cl.id_configuration SET cl.value = 'CUSTOM T2' WHERE c.name = 'EVERPSCLICKANDCOLLECT_TEXT_T2' AND cl.id_lang = 1")
+            self.sql("UPDATE ps_configuration_lang cl JOIN ps_configuration c ON c.id_configuration = cl.id_configuration SET cl.value = 'CUSTOM T2' WHERE c.name IN ('EVERPSCLICKANDCOLLECT_TEXT_NOTES', 'EVERPSCLICKANDCOLLECT_TEXT_T2') AND cl.id_lang = 1")
             self.sql("UPDATE ps_configuration SET value = '{\"1\":\"09:00-12:00\",\"2\":\"09:00-12:00\",\"3\":\"\",\"4\":\"09:00-12:00\",\"5\":\"09:00-12:00\",\"6\":\"09:00-12:00\",\"7\":\"\"}' WHERE name = 'EVERPSCLICKANDCOLLECT_SCHEDULE'")
         self.sql("INSERT INTO ps_everpsclickandcollect_store_stock (id_store, id_product, id_product_attribute, id_shop, qty) VALUES (1, 1, 1, 1, '5'), (1, 1, 2, 1, '3'), (2, 2, 0, 1, '7')")
         return [int(x) for x in ids]
