@@ -46,7 +46,7 @@ class Everpsclickandcollect extends CarrierModule
     {
         $this->name = 'everpsclickandcollect';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.4.5';
+        $this->version = '3.4.6';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -147,6 +147,76 @@ class Everpsclickandcollect extends CarrierModule
         }
         $this->_errors = array_merge($this->_errors, $installer->getErrors());
         return false;
+    }
+
+    /**
+     * PrestaShop's "Upload a module" replaces the files AFTER the old module code was loaded in the
+     * same request, so it only runs the upgrade scripts known to the old code: the database stays one
+     * version behind the files. On the next back office page, the new code finishes the upgrade.
+     * repair() covers every upgrade step and is idempotent.
+     */
+    protected function finishPendingUpgrade()
+    {
+        static $checked = false;
+        if ($checked || !$this->id) {
+            return;
+        }
+        $checked = true;
+        $dbVersion = (string) Db::getInstance()->getValue(
+            'SELECT `version` FROM `' . _DB_PREFIX_ . 'module` WHERE `name` = \'' . pSQL($this->name) . '\''
+        );
+        if ($dbVersion === '' || !Tools::version_compare($this->version, $dbVersion, '>')) {
+            return;
+        }
+        $installer = $this->getInstaller();
+        if ($installer->repair()) {
+            Module::upgradeModuleVersion($this->name, $this->version);
+            PrestaShopLogger::addLog('Click and collect: upgrade from ' . $dbVersion . ' to ' . $this->version . ' finished', 1, null, 'Module', (int) $this->id);
+        }
+    }
+
+    /**
+     * Problems that stop click & collect from being offered at checkout
+     *
+     * @return string[]
+     */
+    protected function getSetupWarnings()
+    {
+        $warnings = array();
+        $carrier = EverpsclickandcollectCarrierManager::getCurrent();
+        if (!$carrier) {
+            $warnings[] = $this->l('The click & collect carrier of this module does not exist anymore (deleted in Shipping > Carriers). Reinstall the module to create it again: your data is kept.');
+        } elseif (!$carrier->active) {
+            $warnings[] = sprintf(
+                $this->l('The carrier "%s" (ID %d) of this module is disabled: customers cannot choose click & collect. Enable it in Shipping > Carriers.'),
+                $carrier->name,
+                (int) $carrier->id
+            );
+        } elseif ($carrier->is_free) {
+            $warnings[] = sprintf(
+                $this->l('The carrier "%s" (ID %d) of this module is set as "free shipping". It works, but it should not be needed: click & collect is always free.'),
+                $carrier->name,
+                (int) $carrier->id
+            );
+        }
+        $stores = json_decode((string) Configuration::get('EVERPSCLICKANDCOLLECT_STORES_IDS'), true);
+        if (empty($stores)) {
+            $warnings[] = $this->l('No store is selected in "Allowed click and collect stores": customers cannot choose click & collect.');
+        }
+        $ids = EverpsclickandcollectCarrierManager::getIds();
+        foreach ((array) Db::getInstance()->executeS(
+            'SELECT `id_carrier`, `name` FROM `' . _DB_PREFIX_ . 'carrier`
+            WHERE `deleted` = 0 AND `active` = 1 AND `name` LIKE \'%collect%\''
+        ) as $other) {
+            if (!in_array((int) $other['id_carrier'], $ids, true)) {
+                $warnings[] = sprintf(
+                    $this->l('Another carrier "%s" (ID %d) is not the carrier of this module: it has no store or pickup time choice. Disable it in Shipping > Carriers so that customers do not choose it by mistake.'),
+                    $other['name'],
+                    (int) $other['id_carrier']
+                );
+            }
+        }
+        return $warnings;
     }
 
     /**
@@ -273,6 +343,7 @@ class Everpsclickandcollect extends CarrierModule
             }
         }
         // A failed or interrupted upgrade: bring the structure, settings, hooks and carrier up to date
+        $this->finishPendingUpgrade();
         if (!EverpsclickandcollectSchema::isUpToDate()) {
             $installer = $this->getInstaller();
             if ($installer->repair()) {
@@ -283,6 +354,7 @@ class Everpsclickandcollect extends CarrierModule
         }
         $this->registerHook('actionEmailSendBefore');
         $this->registerHook('actionObjectProductDeleteAfter');
+        $this->postWarnings = array_merge($this->postWarnings, $this->getSetupWarnings());
         $cron = $this->context->link->getModuleLink(
             $this->name,
             'cron',
@@ -1136,6 +1208,7 @@ class Everpsclickandcollect extends CarrierModule
     */
     public function hookDisplayBackOfficeHeader()
     {
+        $this->finishPendingUpgrade();
         if (Tools::getValue('module_name') == $this->name) {
             $this->context->controller->addJS($this->_path.'views/js/back.js');
             $this->context->controller->addCSS($this->_path.'views/css/back.css');

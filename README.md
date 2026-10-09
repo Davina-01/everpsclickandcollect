@@ -59,6 +59,8 @@ Both rules can be switched off. The customer sees the warning box while choosing
 
 **Upgrading**: upload the new zip over the installed module (no need to uninstall). Make a database backup first.
 
+PrestaShop's "Upload a module" replaces the files after the old module code is already loaded, so the upgrade it runs stops one version behind. Since 3.4.6 the module finishes the upgrade itself on the next back office page (or when you open its configuration page). The configuration page also warns when the module's carrier is disabled, when no store is selected, or when another "Click and collect" carrier (e.g. PrestaShop's own) is active.
+
 ### Module lifecycle (3.4.1)
 
 | Action | What happens to the data |
@@ -132,6 +134,7 @@ Variables: `{latest}` latest pickup time of the week · `{closing}` closing time
 
 ### Changelog
 
+- **3.4.6** – Upgrades uploaded through the back office are finished automatically on the next back office page; configuration page warnings (module carrier disabled or deleted, no store selected, another "Click and collect" carrier active).
 - **3.4.5** – The 4 notes (NOTE, T2, T3, T1) are now one text "Notes" (one note per line, first line = title) with one switch; existing texts are merged automatically on upgrade (a note that was switched off is left out). Shorter explanations on the settings page.
 - **3.4.4** – Settings page: one switch for the 4 notes (NOTE, T2, T3, T1); each switch explains where and when its text appears.
 - **3.4.3** – Settings page: texts grouped in the order the customer sees them (notes, then warning box), the condition shown once per group, and each switch says what the text is ("Show text T1: last note").
